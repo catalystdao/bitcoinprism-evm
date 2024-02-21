@@ -3,7 +3,7 @@ pragma solidity >=0.8.0;
 
 import "forge-std/Test.sol";
 
-import "../src/BtcMirror.sol";
+import "../src/BtcPrism.sol";
 import "../src/BtcTxVerifier.sol";
 
 contract BtcTxVerifierTest is DSTest {
@@ -21,7 +21,7 @@ contract BtcTxVerifierTest is DSTest {
     );
 
     function testVerifyTx() public {
-        BtcMirror mirror = new BtcMirror(
+        BtcPrism mirror = new BtcPrism(
             736000, // start at block #736000
             0x00000000000000000002d52d9816a419b45f1f0efe9a9df4f7b64161e508323d,
             0,

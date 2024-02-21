@@ -296,7 +296,7 @@ contract BtcProofUtilsTest is DSTest {
         );
 
         // - Wrong tx output index
-        vm.expectRevert("Script hash mismatch");
+        vm.expectRevert("Script mismatch");
         this.validate(
             blockHash736000,
             BtcTxProof(header736000, txId736, 1, txProof736, tx736),
@@ -306,7 +306,7 @@ contract BtcProofUtilsTest is DSTest {
         );
 
         // - Wrong dest script hash
-        vm.expectRevert("Script hash mismatch");
+        vm.expectRevert("Script mismatch");
         this.validate(
             blockHash736000,
             BtcTxProof(header736000, txId736, 1, txProof736, tx736),

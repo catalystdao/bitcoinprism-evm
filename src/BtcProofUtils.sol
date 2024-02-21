@@ -2,8 +2,8 @@
 pragma solidity >=0.8.0;
 
 import "./BitcoinOpcodes.sol";
-import "./Endian.sol";
-import "./interfaces/BtcTxProof.sol";
+import { Endian } from "./Endian.sol";
+import { BtcTxProof } from "./interfaces/BtcTxProof.sol";
 
 /**
  * @dev A parsed (but NOT fully validated) Bitcoin transaction.

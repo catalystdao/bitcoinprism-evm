@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0;
 
-import "./Endian.sol";
-import "./interfaces/IBtcMirror.sol";
+import { Endian } from "./Endian.sol";
+import { IBtcPrism } from "./interfaces/IBtcPrism.sol";
 
 //
 //                                        #
@@ -24,15 +24,15 @@ import "./interfaces/IBtcMirror.sol";
 //                                      +++++
 //                                        +
 //
-// BtcMirror lets you prove that a Bitcoin transaction executed, on Ethereum. It
+// BtcPrism lets you prove that a Bitcoin transaction executed, on Ethereum. It
 // does this by running an on-chain light client.
 //
-// Anyone can submit block headers to BtcMirror. The contract verifies
+// Anyone can submit block headers to BtcPrism. The contract verifies
 // proof-of-work, keeping only the longest chain it has seen. As long as 50% of
 // Bitcoin hash power is honest and at least one person is running the submitter
-// script, the BtcMirror contract always reports the current canonical Bitcoin
+// script, the BtcPrism contract always reports the current canonical Bitcoin
 // chain.
-contract BtcMirror is IBtcMirror {
+contract BtcPrism is IBtcPrism {
     /**
      * @notice Emitted whenever the contract accepts a new heaviest chain.
      */
@@ -62,7 +62,7 @@ contract BtcMirror is IBtcMirror {
     /** @notice Difficulty targets in each retargeting period. */
     mapping(uint256 => uint256) public periodToTarget;
 
-    /** @notice The longest reorg that this BtcMirror instance has observed. */
+    /** @notice The longest reorg that this BtcPrism instance has observed. */
     uint256 public longestReorg;
 
     /** @notice Whether we're tracking testnet or mainnet Bitcoin. */
@@ -118,7 +118,7 @@ contract BtcMirror is IBtcMirror {
         require(numHeaders > 0, "must submit at least one block");
 
         // sanity check: the new chain must not end in a past difficulty period
-        // (BtcMirror does not support a 2-week reorg)
+        // (BtcPrism does not support a 2-week reorg)
         uint256 oldPeriod = latestBlockHeight / 2016;
         uint256 newHeight = blockHeight + numHeaders - 1;
         uint256 newPeriod = newHeight / 2016;

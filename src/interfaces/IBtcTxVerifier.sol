@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0;
 
-import "./BtcTxProof.sol";
-import "./IBtcMirror.sol";
+import { BtcTxProof } from "./BtcTxProof.sol";
+import { IBtcPrism } from "./IBtcPrism.sol";
 
 /** @notice Verifies Bitcoin transaction proofs. */
 interface IBtcTxVerifier {
@@ -21,5 +21,5 @@ interface IBtcTxVerifier {
     ) external view returns (bool);
 
     /** @notice Returns the underlying mirror associated with this verifier. */
-    function mirror() external view returns (IBtcMirror);
+    function mirror() external view returns (IBtcPrism);
 }

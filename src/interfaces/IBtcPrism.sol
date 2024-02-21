@@ -2,7 +2,7 @@
 pragma solidity >=0.8.0;
 
 /** @notice Tracks Bitcoin. Provides block hashes. */
-interface IBtcMirror {
+interface IBtcPrism {
     /** @notice Returns the Bitcoin block hash at a specific height. */
     function getBlockHash(uint256 number) external view returns (bytes32);
 

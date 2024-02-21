@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0;
 
-import "./interfaces/IBtcMirror.sol";
-import "./interfaces/IBtcTxVerifier.sol";
-import "./BtcProofUtils.sol";
+import { IBtcPrism } from "./interfaces/IBtcPrism.sol";
+import { IBtcTxVerifier } from "./interfaces/IBtcTxVerifier.sol";
+import { BtcProofUtils } from "./BtcProofUtils.sol";
 
 //
 //                                        #
@@ -26,12 +26,12 @@ import "./BtcProofUtils.sol";
 //                                        +
 //
 // BtcVerifier implements a merkle proof that a Bitcoin payment succeeded. It
-// uses BtcMirror as a source of truth for which Bitcoin block hashes are in the
+// uses BtcPrism as a source of truth for which Bitcoin block hashes are in the
 // canonical chain.
 contract BtcTxVerifier is IBtcTxVerifier {
-    IBtcMirror public immutable mirror;
+    IBtcPrism public immutable mirror;
 
-    constructor(IBtcMirror _mirror) {
+    constructor(IBtcPrism _mirror) {
         mirror = _mirror;
     }
 

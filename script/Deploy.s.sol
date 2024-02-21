@@ -3,22 +3,22 @@ pragma solidity >=0.8.0;
 
 import "forge-std/Script.sol";
 
-import "../src/BtcMirror.sol";
+import "../src/BtcPrism.sol";
 import "../src/BtcTxVerifier.sol";
 
-contract DeployBtcMirror is Script {
+contract DeployBtcPrism is Script {
     /**
-     * @notice Deploys BtcMirror and BtcTxVerifier, tracking either mainnet or
+     * @notice Deploys BtcPrism and BtcTxVerifier, tracking either mainnet or
      *         testnet Bitcoin.
      */
     function run(bool mainnet) external {
         vm.broadcast();
 
-        // Deploy BtcMirror
-        BtcMirror mirror;
+        // Deploy BtcPrism
+        BtcPrism mirror;
         if (mainnet) {
             // ...tracking Bitcoin mainnet, starting at block 739000
-            mirror = new BtcMirror(
+            mirror = new BtcPrism(
                 739000,
                 hex"00000000000000000001059a330a05e66e4fa2d1a5adcd56d1bfefc5c114195d",
                 1654182075,
@@ -27,7 +27,7 @@ contract DeployBtcMirror is Script {
             );
         } else {
             // ...tracking Bitcoin testnet, starting at block 2315360
-            mirror = new BtcMirror(
+            mirror = new BtcPrism(
                 2315360,
                 hex"0000000000000022201eee4f82ca053dfbc50d91e76e9cbff671699646d0982c",
                 1659901500,

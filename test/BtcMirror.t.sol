@@ -3,9 +3,9 @@ pragma solidity >=0.8.0;
 
 import "forge-std/Test.sol";
 
-import "../src/BtcMirror.sol";
+import "../src/BtcPrism.sol";
 
-contract BtcMirrorTest is DSTest {
+contract BtcPrismTest is DSTest {
     Vm vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
 
     // correct header for bitcoin block #717695
@@ -56,7 +56,7 @@ contract BtcMirrorTest is DSTest {
         bytes.concat(bVer, bParent, bTxRoot, bTime, bBits, hex"41b360c0");
 
     function testGetTarget() public {
-        BtcMirror mirror = createBtcMirror();
+        BtcPrism mirror = createBtcPrism();
         uint256 expectedTarget;
         expectedTarget = 0x0000000000000000000B8C8B0000000000000000000000000000000000000000;
         assertEq(mirror.getTarget(hex"8b8c0b17"), expectedTarget);
@@ -67,7 +67,7 @@ contract BtcMirrorTest is DSTest {
     }
 
     function testSubmitError() public {
-        BtcMirror mirror = createBtcMirror();
+        BtcPrism mirror = createBtcPrism();
         assertEq(mirror.getLatestBlockHeight(), 717694);
         vm.expectRevert("bad parent");
         mirror.submit(717695, headerWrongParentHash);
@@ -96,8 +96,8 @@ contract BtcMirrorTest is DSTest {
         uint32 newDifficultyBits
     );
 
-    function createBtcMirror() internal returns (BtcMirror mirror) {
-        mirror = new BtcMirror(
+    function createBtcPrism() internal returns (BtcPrism mirror) {
+        mirror = new BtcPrism(
             717694, // start at block #717694, two  blocks before retarget
             0x0000000000000000000b3dd6d6062aa8b7eb99d033fe29e507e0a0d81b5eaeed,
             1641627092,
@@ -107,7 +107,7 @@ contract BtcMirrorTest is DSTest {
     }
 
     function testSubmit() public {
-        BtcMirror mirror = createBtcMirror();
+        BtcPrism mirror = createBtcPrism();
         assertEq(mirror.getLatestBlockHeight(), 717694);
         vm.expectEmit(true, true, true, true);
         emit NewTip(
@@ -125,7 +125,7 @@ contract BtcMirrorTest is DSTest {
     }
 
     function testSubmitError2() public {
-        BtcMirror mirror = createBtcMirror();
+        BtcPrism mirror = createBtcPrism();
         mirror.submit(717695, headerGood);
         assertEq(mirror.getLatestBlockHeight(), 717695);
         vm.expectRevert("must submit at least one block");
@@ -134,7 +134,7 @@ contract BtcMirrorTest is DSTest {
     }
 
     function testRetarget() public {
-        BtcMirror mirror = createBtcMirror();
+        BtcPrism mirror = createBtcPrism();
         mirror.submit(717695, headerGood);
         assertEq(mirror.getLatestBlockHeight(), 717695);
 
@@ -160,7 +160,7 @@ contract BtcMirrorTest is DSTest {
     }
 
     function testRetargetLonger() public {
-        BtcMirror mirror = createBtcMirror();
+        BtcPrism mirror = createBtcPrism();
         mirror.submit(717695, headerGood);
         assertEq(mirror.getLatestBlockHeight(), 717695);
 
