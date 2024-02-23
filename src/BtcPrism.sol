@@ -37,7 +37,16 @@ contract BtcPrism is IBtcPrism {
 
     uint256 private latestBlockTime;
 
-    mapping(uint256 => bytes32) private blockHeightToHash;
+    /**
+     * @notice Store the last 2n blocks. Reorgs deeper than n are unsupported.
+     * (For comparison, the deepest Bitcoin reorg so far was 53 blocks in Aug
+     * 2010, and anything over 5 blocks would be considered catastrophic today.)
+     * Storing only the last n blocks saves ~17,000 gas per block.
+     */
+    // 1000 blocks is: 10000 minutes = 166 hours = 6.9 days.
+    uint256 constant MAX_ALLOWED_REORG = 1000;
+    uint256 constant NUM_BLOCKS = 2000;
+    bytes32[NUM_BLOCKS] public blockHashes;
 
     /** @notice Difficulty targets in each retargeting period. */
     mapping(uint256 => uint256) public periodToTarget;
@@ -60,7 +69,7 @@ contract BtcPrism is IBtcPrism {
         uint256 _expectedTarget,
         bool _isTestnet
     ) {
-        blockHeightToHash[_blockHeight] = _blockHash;
+        blockHashes[_blockHeight % NUM_BLOCKS] = _blockHash;
         latestBlockHeight = _blockHeight;
         latestBlockTime = _blockTime;
         periodToTarget[_blockHeight / 2016] = _expectedTarget;
@@ -69,9 +78,15 @@ contract BtcPrism is IBtcPrism {
 
     /**
      * @notice Returns the Bitcoin block hash at a specific height.
+     * The block number must not be higher than getLatestBlockHeight().
+     * Returns 0 if the block is too old, and we no longer store its hash.
      */
-    function getBlockHash(uint256 number) public view returns (bytes32) {
-        return blockHeightToHash[number];
+    function getBlockHash(uint256 blockNum) public view returns (bytes32) {
+        require(blockNum <= latestBlockHeight, "Block not yet submitted");
+        if (blockNum < latestBlockHeight - MAX_ALLOWED_REORG) {
+            return 0;
+        }
+        return blockHashes[blockNum % NUM_BLOCKS];
     }
 
     /**
@@ -96,9 +111,9 @@ contract BtcPrism is IBtcPrism {
         uint256 numHeaders = blockHeaders.length / 80;
         require(numHeaders * 80 == blockHeaders.length, "wrong header length");
         require(numHeaders > 0, "must submit at least one block");
+        require(blockHeight > latestBlockHeight - MAX_ALLOWED_REORG, "reorg");
 
         // sanity check: the new chain must not end in a past difficulty period
-        // (BtcPrism does not support a 2-week reorg)
         uint256 oldPeriod = latestBlockHeight / 2016;
         uint256 newHeight = blockHeight + numHeaders - 1;
         uint256 newPeriod = newHeight / 2016;
@@ -139,12 +154,6 @@ contract BtcPrism is IBtcPrism {
 
             uint256 newWork = getWorkInPeriod(newPeriod, newHeight);
             require(newWork > oldWork, "insufficient total difficulty");
-
-            // erase any block hashes above newHeight, now invalidated.
-            // (in case we just accepted a shorter, heavier chain.)
-            for (uint256 i = newHeight + 1; i <= latestBlockHeight; i++) {
-                blockHeightToHash[i] = 0;
-            }
 
             emit NewTotalDifficultySinceRetarget(
                 newHeight,
@@ -199,20 +208,19 @@ contract BtcPrism is IBtcPrism {
 
         // optimistically save the block hash
         // we'll revert if the header turns out to be invalid
-        bytes32 oldHash = blockHeightToHash[blockHeight];
-        bytes32 newHash = bytes32(blockHashNum);
-        if (oldHash != bytes32(0) && oldHash != newHash) {
+        if (blockHeight <= latestBlockHeight) {
             // if we're overwriting a non-zero block hash, that block is reorged
-            numReorged = 1;
+            numReorged = latestBlockHeight - blockHeight;
         }
         // this is the most expensive line. 20,000 gas to use a new storage slot
-        blockHeightToHash[blockHeight] = newHash;
+        blockHashes[blockHeight % NUM_BLOCKS] = bytes32(blockHashNum);
 
         // verify previous hash
         bytes32 prevHash = bytes32(
             Endian.reverse256(uint256(bytes32(blockHeader[4:36])))
         );
-        require(prevHash == blockHeightToHash[blockHeight - 1], "bad parent");
+        // Add NUM_BLOCKS so we roll over then subtract one so we go down.
+        require(prevHash == blockHashes[(blockHeight + NUM_BLOCKS - 1) % NUM_BLOCKS], "bad parent");
         require(prevHash != bytes32(0), "parent block not yet submitted");
 
         // verify proof-of-work
