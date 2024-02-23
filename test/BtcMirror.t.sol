@@ -3,6 +3,7 @@ pragma solidity >=0.8.0;
 
 import "forge-std/Test.sol";
 
+import "../src/interfaces/IBtcPrism.sol";
 import "../src/BtcPrism.sol";
 
 contract BtcPrismTest is DSTest {
@@ -69,11 +70,11 @@ contract BtcPrismTest is DSTest {
     function testSubmitError() public {
         BtcPrism mirror = createBtcPrism();
         assertEq(mirror.getLatestBlockHeight(), 717694);
-        vm.expectRevert("bad parent");
+        vm.expectRevert(abi.encodeWithSelector(BadParent.selector));
         mirror.submit(717695, headerWrongParentHash);
-        vm.expectRevert("wrong header length");
+        vm.expectRevert(abi.encodeWithSelector(WrongHeaderLength.selector));
         mirror.submit(717695, headerWrongLength);
-        vm.expectRevert("block hash above target");
+        vm.expectRevert(abi.encodeWithSelector(HashAboveTarget.selector));
         mirror.submit(717695, headerHashTooEasy);
     }
 
@@ -128,7 +129,7 @@ contract BtcPrismTest is DSTest {
         BtcPrism mirror = createBtcPrism();
         mirror.submit(717695, headerGood);
         assertEq(mirror.getLatestBlockHeight(), 717695);
-        vm.expectRevert("must submit at least one block");
+        vm.expectRevert(abi.encodeWithSelector(NoBlocksSubmitted.selector));
         mirror.submit(717696, hex"");
         assertEq(mirror.getLatestBlockHeight(), 717695);
     }
