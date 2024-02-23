@@ -13,6 +13,11 @@ enum AddressType {
     P2TR
 }
 
+error BadArgumentLength(uint256 given, uint256 expected);
+error WitnessVersionGt16();
+error WitnessLengthGt75();
+error WrongWitnessVersion();
+
 /**
  * @notice A Parsed Script address
  */
@@ -173,15 +178,15 @@ contract BtcScript {
         if (btcAddress.addressType == AddressType.P2PKH) return scriptP2PKH(btcAddress.legacyAddress);
         if (btcAddress.addressType == AddressType.P2SH) return scriptP2SH(btcAddress.legacyAddress);
         if (btcAddress.addressType == AddressType.P2WPKH) {
-            require(btcAddress.witnessVersion == 0, "WrongWitnessVersion");
+            if (btcAddress.witnessVersion != 0) revert WrongWitnessVersion();
             return scriptP2WPKH(btcAddress.witnessProgram);
         }
         if (btcAddress.addressType == AddressType.P2SH) {
-            require(btcAddress.witnessVersion == 0, "WrongWitnessVersion");
+            if (btcAddress.witnessVersion != 0) revert WrongWitnessVersion();
             return scriptP2WSH(btcAddress.witnessProgram);
         }
         if (btcAddress.addressType == AddressType.P2TR) {
-            require(btcAddress.witnessVersion == 1, "WrongWitnessVersion");
+            if (btcAddress.witnessVersion != 1) revert WrongWitnessVersion();
             return scriptP2TR(btcAddress.witnessProgram);
         }
     }
@@ -199,12 +204,12 @@ contract BtcScript {
     }
 
     function scriptP2WPKH(bytes calldata pubkeyhash) public pure returns(bytes memory) {
-        require(pubkeyhash.length == 20, "pubkey hash length");
+        if (pubkeyhash.length != 20) revert BadArgumentLength(pubkeyhash.length, 20);
         return scriptWitness(0, pubkeyhash);
     }
 
     function scriptP2WSH(bytes calldata witnessScript) public pure returns(bytes memory) {
-        require(witnessScript.length == 32, "witness script hash length");
+        if (witnessScript.length != 32) revert BadArgumentLength(witnessScript.length, 32);
         return scriptWitness(0, witnessScript);
     }
 
@@ -217,7 +222,7 @@ contract BtcScript {
         bytes1 witnessBytes;
         // Currently only 2 witness versions exist but this allows for future proofing.
         // The number of Bitcoin number opcodes only allow for number 0 through 16.
-        require(witnessVersion <= 16, "witness version > 16");
+        if (witnessVersion > 16) revert WitnessVersionGt16();
         if (witnessVersion == 0) {
             witnessBytes = OP_0;
         } else {
@@ -225,7 +230,7 @@ contract BtcScript {
         }
         // The length can't be longer than 75 bytes otherwise we should use another push opcode.
         uint8 witnessLength = uint8(witnessProgram.length);
-        require(witnessLength <= 75, "witness length > 75");
+        if (witnessLength > 75) revert WitnessLengthGt75();
         return bytes.concat(witnessBytes, bytes1(uint8(witnessLength)), witnessProgram);
     }
 }
