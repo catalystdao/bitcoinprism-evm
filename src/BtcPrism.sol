@@ -33,20 +33,18 @@ contract BtcPrism is IBtcPrism {
      */
     event Reorg(uint256 count, bytes32 oldTip, bytes32 newTip);
 
-    uint256 private latestBlockHeight;
+    uint120 private latestBlockTime;
 
-    uint256 private latestBlockTime;
+    uint120 private latestBlockHeight;
+
+    /** @notice Whether we're tracking testnet or mainnet Bitcoin. */
+    bool public immutable isTestnet;
 
     mapping(uint256 => bytes32) private blockHeightToHash;
 
     /** @notice Difficulty targets in each retargeting period. */
     mapping(uint256 => uint256) public periodToTarget;
 
-    /** @notice The longest reorg that this BtcPrism instance has observed. */
-    uint256 public longestReorg;
-
-    /** @notice Whether we're tracking testnet or mainnet Bitcoin. */
-    bool public immutable isTestnet;
 
     /** @notice Tracks Bitcoin starting from a given block. The isTestnet
      *          argument is necessary because the Bitcoin testnet does not
@@ -54,9 +52,9 @@ contract BtcPrism is IBtcPrism {
      *          checks in order to track it.
      */
     constructor(
-        uint256 _blockHeight,
+        uint120 _blockHeight,
         bytes32 _blockHash,
-        uint256 _blockTime,
+        uint120 _blockTime,
         uint256 _expectedTarget,
         bool _isTestnet
     ) {
@@ -160,7 +158,7 @@ contract BtcPrism is IBtcPrism {
         }
 
         // record the new tip height and timestamp
-        latestBlockHeight = newHeight;
+        latestBlockHeight = uint120(newHeight);
         uint256 ixT = blockHeaders.length - 12;
         uint32 time = uint32(bytes4(blockHeaders[ixT:ixT + 4]));
         latestBlockTime = Endian.reverse32(time);
