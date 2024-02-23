@@ -101,12 +101,14 @@ library BtcProof {
         uint256 txIndex,
         bytes calldata siblings
     ) internal pure returns (bytes32) {
+        unchecked {
+
         bytes32 ret = bytes32(Endian.reverse256(uint256(txId)));
         uint256 len = siblings.length / 32;
-        for (uint256 i = 0; i < len; i++) {
+        for (uint256 i = 0; i < len; ++i) {
             bytes32 s = bytes32(
                 Endian.reverse256(
-                    uint256(bytes32(siblings[i * 32:(i + 1) * 32]))
+                    uint256(bytes32(siblings[i * 32:(i + 1) * 32]))  // i is small.
                 )
             );
             if (txIndex & 1 == 0) {
@@ -117,6 +119,8 @@ library BtcProof {
             txIndex = txIndex >> 1;
         }
         return ret;
+
+        }
     }
 
     /**
@@ -141,12 +145,22 @@ library BtcProof {
     /**
      * @dev Parses a HASH-SERIALIZED Bitcoin transaction.
      *      This means no flags and no segwit witnesses.
+     *
+     *      Should only be done on verified transactions as the unchecked block allows
+     *      for user controlled overflow but only if bad data is provided. A valid Bitcoin
+     *      transaction will never behave like that.
      */
     function parseBitcoinTx(bytes calldata rawTx)
         internal
         pure
         returns (BitcoinTx memory ret)
     {
+        // This unchecked block is safe because the offset is measured in the size of rawTx.
+        // as such, it will be lower than type(uint256).max
+        // Some people may try to make the varint fail but that isn't a valid Bitcoin transaction.
+        // as such, it is already invalid.
+        unchecked {
+
         ret.version = Endian.reverse32(uint32(bytes4(rawTx[0:4])));
         if (ret.version < 1 || ret.version > 2) {
             return ret; // invalid version
@@ -157,7 +171,7 @@ library BtcProof {
         uint256 nInputs;
         (nInputs, offset) = readVarInt(rawTx, offset);
         ret.inputs = new BitcoinTxIn[](nInputs);
-        for (uint256 i = 0; i < nInputs; i++) {
+        for (uint256 i = 0; i < nInputs; ++i) {
             BitcoinTxIn memory txIn;
             txIn.prevTxID = Endian.reverse256(
                 uint256(bytes32(rawTx[offset:offset + 32]))
@@ -182,7 +196,7 @@ library BtcProof {
         uint256 nOutputs;
         (nOutputs, offset) = readVarInt(rawTx, offset);
         ret.outputs = new BitcoinTxOut[](nOutputs);
-        for (uint256 i = 0; i < nOutputs; i++) {
+        for (uint256 i = 0; i < nOutputs; ++i) {
             BitcoinTxOut memory txOut;
             txOut.valueSats = Endian.reverse64(
                 uint64(bytes8(rawTx[offset:offset + 8]))
@@ -207,6 +221,8 @@ library BtcProof {
         // Parsing complete, sanity checks passed, return success.
         ret.validFormat = true;
         return ret;
+
+        }
     }
 
     /** Reads a Bitcoin-serialized varint = a u256 serialized in 1-9 bytes. */
@@ -215,6 +231,9 @@ library BtcProof {
         pure
         returns (uint256 val, uint256 newOffset)
     {
+        // The offset is bounded in size.
+        unchecked {
+
         uint8 pivot = uint8(buf[offset]);
         if (pivot < 0xfd) {
             val = pivot;
@@ -229,6 +248,8 @@ library BtcProof {
             // pivot == 0xff
             val = Endian.reverse64(uint64(bytes8(buf[offset + 1:offset + 9])));
             newOffset = offset + 9;
+        }
+
         }
     }
 }
