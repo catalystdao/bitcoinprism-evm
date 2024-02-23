@@ -4,26 +4,6 @@ pragma solidity >=0.8.0;
 import { Endian } from "./Endian.sol";
 import { IBtcPrism } from "./interfaces/IBtcPrism.sol";
 
-//
-//                                        #
-//                                       # #
-//                                      # # #
-//                                     # # # #
-//                                    # # # # #
-//                                   # # # # # #
-//                                  # # # # # # #
-//                                 # # # # # # # #
-//                                # # # # # # # # #
-//                               # # # # # # # # # #
-//                              # # # # # # # # # # #
-//                                   # # # # # #
-//                               +        #        +
-//                                ++++         ++++
-//                                  ++++++ ++++++
-//                                    +++++++++
-//                                      +++++
-//                                        +
-//
 // BtcPrism lets you prove that a Bitcoin transaction executed, on Ethereum. It
 // does this by running an on-chain light client.
 //
