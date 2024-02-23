@@ -1,6 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0;
 
+error WrongHeaderLength();
+error NoBlocksSubmitted();
+error BadParent();
+error NoParent();
+error HashAboveTarget();
+error DifficultyRetargetLT25(); // <25% difficulty retarget
+error WrongDifficultyBits();
+error OldDifficultyPeriod();
+error InsufficientTotalDifficulty();
+error InsufficientChainLength();
+
 /** @notice Tracks Bitcoin. Provides block hashes. */
 interface IBtcPrism {
     /** @notice Returns the Bitcoin block hash at a specific height. */
