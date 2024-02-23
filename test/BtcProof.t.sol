@@ -3,7 +3,7 @@ pragma solidity >=0.8.0;
 
 import "forge-std/Test.sol";
 
-import { BtcProof, BtcTxProof, BitcoinTx } from "../src/library/BtcProof.sol";
+import { BtcProof, BtcTxProof, BitcoinTx, TxMerkleRootMismatch, ScriptMismatch, AmountMismatch, TxIDMismatch, BlockHashMismatch } from "../src/library/BtcProof.sol";
 
 contract MockBtcProof {
     function validateScriptMatch(
@@ -13,13 +13,55 @@ contract MockBtcProof {
         bytes calldata outputScript,
         uint256 satoshisExpected
     ) external pure returns (bool) {
-        return BtcProof.validateScriptMatch(
-            blockHash,
-            txProof,
-            txOutIx,
-            outputScript,
-            satoshisExpected
-        );
+        return BtcProof.validateScriptMatch(blockHash, txProof, txOutIx, outputScript, satoshisExpected);
+    }
+
+    function getBlockHash(bytes calldata blockHeader)
+        external
+        pure
+        returns (bytes32)
+    {
+        return BtcProof.getBlockHash(blockHeader);
+    }
+
+    function getBlockTxMerkleRoot(bytes calldata blockHeader)
+        external
+        pure
+        returns (bytes32)
+    {
+        return BtcProof.getBlockTxMerkleRoot(blockHeader);
+    }
+
+    function getTxMerkleRoot(
+        bytes32 txId,
+        uint256 txIndex,
+        bytes calldata siblings
+    ) external pure returns (bytes32) {
+        return BtcProof.getTxMerkleRoot(txId, txIndex, siblings);
+    }
+
+    function getTxID(bytes calldata rawTransaction)
+        external
+        pure
+        returns (bytes32)
+    {
+        return BtcProof.getTxID(rawTransaction);
+    }
+
+    function parseBitcoinTx(bytes calldata rawTx)
+        external
+        pure
+        returns (BitcoinTx memory ret)
+    {
+        return BtcProof.parseBitcoinTx(rawTx);
+    }
+
+    function readVarInt(bytes calldata buf, uint256 offset)
+        external
+        pure
+        returns (uint256 val, uint256 newOffset)
+    {
+        return BtcProof.readVarInt(buf, offset);
     }
 }
 
@@ -147,10 +189,10 @@ contract BtcProofTest is DSTest {
     // 5. verify that we can hash a block header correctly
     function testGetBlockHash() public {
         // Block 717695
-        assertEq(BtcProof.getBlockHash(headerGood), blockHash717695);
+        assertEq(BtcProofUtils.getBlockHash(headerGood), blockHash717695);
 
         // Block 736000
-        assertEq(BtcProof.getBlockHash(header736000), blockHash736000);
+        assertEq(BtcProofUtils.getBlockHash(header736000), blockHash736000);
     }
 
     // 4. verify that we can get the transaction merkle root from a block header
@@ -253,80 +295,63 @@ contract BtcProofTest is DSTest {
         assertEq(t.locktime, 0);
     }
 
-    // 1c. finally, verify the recipient of a transaction *output*
-    bytes constant b0 = hex"0000000000000000000000000000000000000000";
-
-    function testGetP2SH() public {
-        bytes memory validP2SH = hex"a914ae2f3d4b06579b62574d6178c10c882b9150374087";
-        bytes memory invalidP2SH1 = hex"a914ae2f3d4b06579b62574d6178c10c882b9150374086";
-        bytes memory invalidP2SH2 = hex"a900ae2f3d4b06579b62574d6178c10c882b9150374087";
-
-        assertEq(
-            uint160(BtcProofUtils.getP2SH(validP2SH)),
-            0x00ae2f3d4b06579b62574d6178c10c882b91503740
-        );
-
-        assertEq(uint160(BtcProofUtils.getP2SH(invalidP2SH1)), 0);
-        assertEq(uint160(BtcProofUtils.getP2SH(invalidP2SH2)), 0);
-    }
-
     // 1,2,3,4,5. putting it all together, verify a payment.
     function testValidatePayment() public {
         bytes32 txId736 = 0x3667d5beede7d89e41b0ec456f99c93d6cc5e5caff4c4a5f993caea477b4b9b9;
-        bytes memory destScriptHash = hex"ae2f3d4b06579b62574d6178c10c882b91503740";
+        bytes memory destScript = hex"a914ae2f3d4b06579b62574d6178c10c882b9150374087";
 
         // Should succeed
-        // this.validate(
-        //     blockHash736000,
-        //     BtcTxProof(header736000, txId736, 1, txProof736, tx736),
-        //     0,
-        //     destScriptHash,
-        //     25200000
-        // );
+        BtcProofUtils.validateScriptMatch(
+            blockHash736000,
+            BtcTxProof(header736000, txId736, 1, txProof736, tx736),
+            0,
+            destScript,
+            25200000
+        );
 
         // Make each argument invalid, one at a time.
-        vm.expectRevert("Block hash mismatch");
-        this.validate(
+        vm.expectRevert(abi.encodeWithSelector(BlockHashMismatch.selector, 0x00000000000000000002d52d9816a419b45f1f0efe9a9df4f7b64161e508323d, 0x00000000000000000000135a8473d7d3a3b091c928246c65ce2a396dd2a5ca9a));
+        BtcProofUtils.validateScriptMatch(
             blockHash717695,
             BtcTxProof(header736000, txId736, 1, txProof736, tx736),
             0,
-            destScriptHash,
+            destScript,
             25200000
         );
 
         // - Bad tx proof (doesn't match root)
-        vm.expectRevert("Tx merkle root mismatch");
-        this.validate(
+        vm.expectRevert(abi.encodeWithSelector(TxMerkleRootMismatch.selector, 0xf8aec519bcd878c9713dc8153a72fd62e3667c5ade70d8d0415584b8528d79ca, 0x31b669b35884e22c31b286ed8949007609db6cb50afe8b6e6e649e62cc24e19c));
+        BtcProofUtils.validateScriptMatch(
             blockHash717695,
             BtcTxProof(headerGood, txId736, 1, txProof736, tx736),
             0,
-            destScriptHash,
+            destScript,
             25200000
         );
 
         // - Wrong tx index
-        vm.expectRevert("Tx merkle root mismatch");
-        this.validate(
+        vm.expectRevert(abi.encodeWithSelector(TxMerkleRootMismatch.selector, 0x31b669b35884e22c31b286ed8949007609db6cb50afe8b6e6e649e62cc24e19c, 0x28ce7a513419e3d298d4cac4ce4e7b2ede283c56f4faf3d99801bc3585b29387));
+        BtcProofUtils.validateScriptMatch(
             blockHash736000,
             BtcTxProof(header736000, txId736, 2, txProof736, tx736),
             0,
-            destScriptHash,
+            destScript,
             25200000
         );
 
         // - Wrong tx output index
-        vm.expectRevert("Script mismatch");
-        this.validate(
+        vm.expectRevert(abi.encodeWithSelector(ScriptMismatch.selector, hex"a91415ecf89e95eb07fbc351b3f7f4c54406f7ee5c1087", hex"a914ae2f3d4b06579b62574d6178c10c882b9150374087"));
+        BtcProofUtils.validateScriptMatch(
             blockHash736000,
             BtcTxProof(header736000, txId736, 1, txProof736, tx736),
             1,
-            destScriptHash,
+            destScript,
             25200000
         );
 
         // - Wrong dest script hash
-        vm.expectRevert("Script mismatch");
-        this.validate(
+        vm.expectRevert(abi.encodeWithSelector(ScriptMismatch.selector, destScript, hex"abcd"));
+        BtcProofUtils.validateScriptMatch(
             blockHash736000,
             BtcTxProof(header736000, txId736, 1, txProof736, tx736),
             0,
@@ -335,29 +360,13 @@ contract BtcProofTest is DSTest {
         );
 
         // - Wrong amount, off by one satoshi
-        vm.expectRevert("Amount mismatch");
-        this.validate(
+        vm.expectRevert(abi.encodeWithSelector(AmountMismatch.selector, 25200000, 25200001));
+        BtcProofUtils.validateScriptMatch(
             blockHash736000,
             BtcTxProof(header736000, txId736, 1, txProof736, tx736),
             0,
-            destScriptHash,
+            destScript,
             25200001
-        );
-    }
-
-    function validate(
-        bytes32 blockHash,
-        BtcTxProof calldata txProof,
-        uint256 txOutIx,
-        bytes calldata outputScript,
-        uint256 satoshisExpected
-    ) public view {
-        BtcProofUtils.validateScriptMatchExternal(
-            blockHash,
-            txProof,
-            txOutIx,
-            outputScript,
-            satoshisExpected
         );
     }
 }

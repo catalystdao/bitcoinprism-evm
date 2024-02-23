@@ -4,6 +4,12 @@ pragma solidity >=0.8.0;
 import { Endian } from "../Endian.sol";
 import { BtcTxProof, BitcoinTx, BitcoinTxIn, BitcoinTxOut } from "../interfaces/BtcStructs.sol";
 
+error TxMerkleRootMismatch(bytes32 blockTxRoot, bytes32 txRoot);
+error ScriptMismatch(bytes expected, bytes actual);
+error AmountMismatch(uint256 txoSats, uint256 expected);
+error TxIDMismatch(bytes32 rawTxId, bytes32 txProofId);
+error BlockHashMismatch(bytes32 blockHeader, bytes32 givenBlockHash);
+
 // BtcProof provides functions to prove things about Bitcoin transactions.
 // Verifies merkle inclusion proofs, transaction IDs, and payment details.
 library BtcProof {
@@ -29,10 +35,9 @@ library BtcProof {
         uint256 satoshisExpected
     ) internal pure returns (bool) {
         // 5. Block header to block hash
-        require(
-            getBlockHash(txProof.blockHeader) == blockHash,
-            "Block hash mismatch"
-        );
+        
+        bytes32 blockHeaderBlockHash = getBlockHash(txProof.blockHeader);
+        if (blockHeaderBlockHash != blockHash) revert BlockHashMismatch(blockHeaderBlockHash, blockHash);
 
         // 4. and 3. Transaction ID included in block
         bytes32 blockTxRoot = getBlockTxMerkleRoot(txProof.blockHeader);
@@ -41,21 +46,22 @@ library BtcProof {
             txProof.txIndex,
             txProof.txMerkleProof
         );
-        require(blockTxRoot == txRoot, "Tx merkle root mismatch");
+        if (blockTxRoot != txRoot) revert TxMerkleRootMismatch(blockTxRoot, txRoot);
 
         // 2. Raw transaction to TxID
-        require(getTxID(txProof.rawTx) == txProof.txId, "Tx ID mismatch");
+        bytes32 rawTxId = getTxID(txProof.rawTx);
+        if (rawTxId != txProof.txId) revert TxIDMismatch(rawTxId, txProof.txId);
 
         // 1. Finally, validate raw transaction pays stated recipient.
         BitcoinTx memory parsedTx = parseBitcoinTx(txProof.rawTx);
         BitcoinTxOut memory txo = parsedTx.outputs[txOutIx];
         // if the length are less than 32, then use bytes32 to compare.
         if  (txo.script.length <= 32 && outputScript.length <= 32) {
-            require(bytes32(txo.script) == bytes32(outputScript), "Script mismatch");
+            if (bytes32(txo.script) != bytes32(outputScript)) revert ScriptMismatch(txo.script, outputScript);
         } else {
-            require(keccak256(txo.script) == keccak256(outputScript), "Script mismatch");
+            if (keccak256(txo.script) != keccak256(outputScript)) revert ScriptMismatch(txo.script, outputScript);
         }
-        require(txo.valueSats == satoshisExpected, "Amount mismatch");
+        if (txo.valueSats != satoshisExpected) revert AmountMismatch(txo.valueSats, satoshisExpected);
 
         // We've verified that blockHash contains a transaction with correct script
         // that sends at least satoshisExpected to the given hash.

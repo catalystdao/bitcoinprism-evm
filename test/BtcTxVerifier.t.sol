@@ -5,6 +5,9 @@ import "forge-std/Test.sol";
 
 import "../src/BtcPrism.sol";
 import "../src/BtcTxVerifier.sol";
+import "../src/library/BtcProof.sol";
+
+import { TooFewConfirmations } from "../src/interfaces/IBtcTxVerifier.sol";
 
 contract BtcTxVerifierTest is DSTest {
     Vm vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
@@ -73,7 +76,7 @@ contract BtcTxVerifierTest is DSTest {
             hex"a91415ecf89e95eb07fbc351b3f7f4c54406f7ee5c1087"
             hex"00000000"
         );
-        bytes memory destSH = hex"ae2f3d4b06579b62574d6178c10c882b91503740";
+        bytes memory destScript = hex"a914ae2f3d4b06579b62574d6178c10c882b9150374087";
 
         BtcTxProof memory txP = BtcTxProof(
             header736000,
@@ -83,18 +86,18 @@ contract BtcTxVerifierTest is DSTest {
             tx736
         );
 
-        assertTrue(verif.verifyPayment(1, 736000, txP, 0, destSH, 25200000));
+        assertTrue(verif.verifyPayment(1, 736000, txP, 0, destScript, 25200000));
 
-        vm.expectRevert("Not enough Bitcoin block confirmations");
-        assertTrue(!verif.verifyPayment(2, 736000, txP, 0, destSH, 25200000));
+        vm.expectRevert(abi.encodeWithSelector(TooFewConfirmations.selector, 1, 2));
+        assertTrue(!verif.verifyPayment(2, 736000, txP, 0, destScript, 25200000));
 
-        vm.expectRevert("Amount mismatch");
-        assertTrue(!verif.verifyPayment(1, 736000, txP, 0, destSH, 25200001));
+        vm.expectRevert(abi.encodeWithSelector(AmountMismatch.selector, 25200000, 25200001));
+        assertTrue(!verif.verifyPayment(1, 736000, txP, 0, destScript, 25200001));
 
-        vm.expectRevert("Script mismatch");
-        assertTrue(!verif.verifyPayment(1, 736000, txP, 1, destSH, 25200000));
+        vm.expectRevert(abi.encodeWithSelector(ScriptMismatch.selector, hex"a91415ecf89e95eb07fbc351b3f7f4c54406f7ee5c1087", hex"a914ae2f3d4b06579b62574d6178c10c882b9150374087"));
+        assertTrue(!verif.verifyPayment(1, 736000, txP, 1, destScript, 25200000));
 
-        vm.expectRevert("Block hash mismatch");
-        assertTrue(!verif.verifyPayment(1, 700000, txP, 0, destSH, 25200000));
+        vm.expectRevert(abi.encodeWithSelector(BlockHashMismatch.selector, 0x00000000000000000002d52d9816a419b45f1f0efe9a9df4f7b64161e508323d, 0x0000000000000000000000000000000000000000000000000000000000000000));
+        assertTrue(!verif.verifyPayment(1, 700000, txP, 0, destScript, 25200000));
     }
 }

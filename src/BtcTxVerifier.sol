@@ -29,7 +29,9 @@ contract BtcTxVerifier is IBtcTxVerifier {
 
             if (currentHeight < blockNum) revert NoBlock(currentHeight, blockNum);
 
-            if (currentHeight <= minConfirmations + blockNum) revert TooFewConfirmations(currentHeight - blockNum, minConfirmations);
+            unchecked {
+                if (currentHeight + 1 - blockNum < minConfirmations) revert TooFewConfirmations(currentHeight + 1 - blockNum, minConfirmations);
+            }
         }
 
         bytes32 blockHash = mirror.getBlockHash(blockNum);
