@@ -1,8 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0;
 
-import { BtcTxProof } from "./BtcTxProof.sol";
+import { BtcTxProof } from "./BtcStructs.sol";
 import { IBtcPrism } from "./IBtcPrism.sol";
+
+error NoBlock(uint256 currentHeight, uint256 proposedHeight);
+error TooFewConfirmations(uint256 current, uint256 wanted);
+error InvalidProof();
 
 /** @notice Verifies Bitcoin transaction proofs. */
 interface IBtcTxVerifier {

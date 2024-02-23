@@ -3,10 +3,31 @@ pragma solidity >=0.8.0;
 
 import "forge-std/Test.sol";
 
-import "../src/BtcProofUtils.sol";
+import { BtcProof, BtcTxProof, BitcoinTx } from "../src/library/BtcProof.sol";
 
-contract BtcProofUtilsTest is DSTest {
+contract MockBtcProof {
+    function validateScriptMatch(
+        bytes32 blockHash,
+        BtcTxProof calldata txProof,
+        uint256 txOutIx,
+        bytes calldata outputScript,
+        uint256 satoshisExpected
+    ) external pure returns (bool) {
+        return BtcProof.validateScriptMatch(
+            blockHash,
+            txProof,
+            txOutIx,
+            outputScript,
+            satoshisExpected
+        );
+    }
+}
+
+
+contract BtcProofTest is DSTest {
     Vm vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
+
+    MockBtcProof BtcProofUtils = new MockBtcProof();
 
     // correct header for bitcoin block #717695
     // all bitcoin header values are little-endian:
@@ -126,10 +147,10 @@ contract BtcProofUtilsTest is DSTest {
     // 5. verify that we can hash a block header correctly
     function testGetBlockHash() public {
         // Block 717695
-        assertEq(BtcProofUtils.getBlockHash(headerGood), blockHash717695);
+        assertEq(BtcProof.getBlockHash(headerGood), blockHash717695);
 
         // Block 736000
-        assertEq(BtcProofUtils.getBlockHash(header736000), blockHash736000);
+        assertEq(BtcProof.getBlockHash(header736000), blockHash736000);
     }
 
     // 4. verify that we can get the transaction merkle root from a block header
@@ -245,8 +266,6 @@ contract BtcProofUtilsTest is DSTest {
             0x00ae2f3d4b06579b62574d6178c10c882b91503740
         );
 
-        assertEq(uint160(BtcProofUtils.getP2SH(validP2SH)), 0);
-        assertEq(uint160(BtcProofUtils.getP2SH(validP2SH)), 0);
         assertEq(uint160(BtcProofUtils.getP2SH(invalidP2SH1)), 0);
         assertEq(uint160(BtcProofUtils.getP2SH(invalidP2SH2)), 0);
     }
@@ -330,15 +349,15 @@ contract BtcProofUtilsTest is DSTest {
         bytes32 blockHash,
         BtcTxProof calldata txProof,
         uint256 txOutIx,
-        bytes calldata destScriptHash,
-        uint256 sats
-    ) public pure {
-        BtcProofUtils.validateScriptMatch(
+        bytes calldata outputScript,
+        uint256 satoshisExpected
+    ) public view {
+        BtcProofUtils.validateScriptMatchExternal(
             blockHash,
             txProof,
             txOutIx,
-            destScriptHash,
-            sats
+            outputScript,
+            satoshisExpected
         );
     }
 }

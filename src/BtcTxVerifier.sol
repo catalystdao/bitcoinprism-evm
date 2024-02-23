@@ -3,28 +3,9 @@ pragma solidity >=0.8.0;
 
 import { IBtcPrism } from "./interfaces/IBtcPrism.sol";
 import { IBtcTxVerifier } from "./interfaces/IBtcTxVerifier.sol";
-import { BtcProofUtils } from "./BtcProofUtils.sol";
+import { BtcProof, BtcTxProof } from "./library/BtcProof.sol";
+import { NoBlock, TooFewConfirmations, InvalidProof } from "./interfaces/IBtcTxVerifier.sol";
 
-//
-//                                        #
-//                                       # #
-//                                      # # #
-//                                     # # # #
-//                                    # # # # #
-//                                   # # # # # #
-//                                  # # # # # # #
-//                                 # # # # # # # #
-//                                # # # # # # # # #
-//                               # # # # # # # # # #
-//                              # # # # # # # # # # #
-//                                   # # # # # #
-//                               +        #        +
-//                                ++++         ++++
-//                                  ++++++ ++++++
-//                                    +++++++++
-//                                      +++++
-//                                        +
-//
 // BtcVerifier implements a merkle proof that a Bitcoin payment succeeded. It
 // uses BtcPrism as a source of truth for which Bitcoin block hashes are in the
 // canonical chain.
@@ -44,31 +25,24 @@ contract BtcTxVerifier is IBtcTxVerifier {
         uint256 amountSats
     ) external view returns (bool) {
         {
-            uint256 mirrorHeight = mirror.getLatestBlockHeight();
+            uint256 currentHeight = mirror.getLatestBlockHeight();
 
-            require(
-                mirrorHeight >= blockNum,
-                "Bitcoin Mirror doesn't have that block yet"
-            );
+            if (currentHeight < blockNum) revert NoBlock(currentHeight, blockNum);
 
-            require(
-                mirrorHeight + 1 >= minConfirmations + blockNum,
-                "Not enough Bitcoin block confirmations"
-            );
+            if (currentHeight <= minConfirmations + blockNum) revert TooFewConfirmations(currentHeight - blockNum, minConfirmations);
         }
 
         bytes32 blockHash = mirror.getBlockHash(blockNum);
 
-        require(
-            BtcProofUtils.validateScriptMatch(
+        if(
+            !BtcProof.validateScriptMatch(
                 blockHash,
                 inclusionProof,
                 txOutIx,
                 destScriptHash,
                 amountSats
-            ),
-            "Invalid transaction proof"
-        );
+            )
+        ) revert InvalidProof();
 
         return true;
     }

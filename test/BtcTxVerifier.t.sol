@@ -91,7 +91,7 @@ contract BtcTxVerifierTest is DSTest {
         vm.expectRevert("Amount mismatch");
         assertTrue(!verif.verifyPayment(1, 736000, txP, 0, destSH, 25200001));
 
-        vm.expectRevert("Script hash mismatch");
+        vm.expectRevert("Script mismatch");
         assertTrue(!verif.verifyPayment(1, 736000, txP, 1, destSH, 25200000));
 
         vm.expectRevert("Block hash mismatch");
