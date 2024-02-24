@@ -221,7 +221,7 @@ contract BtcPrism is IBtcPrism {
         // compute the block hash
         require(blockHeader.length == 80);
         uint256 blockHashNum = Endian.reverse256(
-            uint256(sha256(abi.encode(sha256(blockHeader))))
+            uint256(sha256(bytes.concat(sha256(blockHeader))))
         );
 
         // optimistically save the block hash
