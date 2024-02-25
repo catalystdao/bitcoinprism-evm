@@ -2,7 +2,7 @@
 pragma solidity >=0.8.0;
 
 import { Endian } from "./Endian.sol";
-import { IBtcPrism } from "./interfaces/IBtcPrism.sol";
+import "./interfaces/IBtcPrism.sol";
 
 // BtcPrism lets you prove that a Bitcoin transaction executed, on Ethereum. It
 // does this by running an on-chain light client.
@@ -107,21 +107,21 @@ contract BtcPrism is IBtcPrism {
      */
     function submit(uint256 blockHeight, bytes calldata blockHeaders) public {
         uint256 numHeaders = blockHeaders.length / 80;
-        require(numHeaders * 80 == blockHeaders.length, "wrong header length");
-        require(numHeaders > 0, "must submit at least one block");
+        if (numHeaders * 80 != blockHeaders.length) revert WrongHeaderLength();
+        if (numHeaders == 0) revert NoBlocksSubmitted();
         require(blockHeight > latestBlockHeight - MAX_ALLOWED_REORG, "reorg");
 
         // sanity check: the new chain must not end in a past difficulty period
         uint256 oldPeriod = latestBlockHeight / 2016;
         uint256 newHeight = blockHeight + numHeaders - 1;
         uint256 newPeriod = newHeight / 2016;
-        require(newPeriod >= oldPeriod, "old difficulty period");
+        if (newPeriod < oldPeriod) revert OldDifficultyPeriod();
 
         // if we crossed a retarget, do extra math to compare chain weight
         uint256 parentPeriod = (blockHeight - 1) / 2016;
         uint256 oldWork = 0;
         if (newPeriod > parentPeriod) {
-            assert(newPeriod == parentPeriod + 1);
+            require(newPeriod == parentPeriod + 1);
             // the submitted chain segment contains a difficulty retarget.
             if (newPeriod == oldPeriod) {
                 // the old canonical chain is past the retarget
@@ -129,7 +129,7 @@ contract BtcPrism is IBtcPrism {
                 oldWork = getWorkInPeriod(oldPeriod, latestBlockHeight);
             } else {
                 // the old canonical chain is before the retarget
-                assert(oldPeriod == parentPeriod);
+                require(oldPeriod == parentPeriod);
             }
         }
 
@@ -151,7 +151,7 @@ contract BtcPrism is IBtcPrism {
             );
 
             uint256 newWork = getWorkInPeriod(newPeriod, newHeight);
-            require(newWork > oldWork, "insufficient total difficulty");
+            if (newWork <= oldWork) revert InsufficientTotalDifficulty();
 
             emit NewTotalDifficultySinceRetarget(
                 newHeight,
@@ -161,9 +161,9 @@ contract BtcPrism is IBtcPrism {
         } else {
             // here we know what newPeriod == oldPeriod == parentPeriod
             // with identical per-block difficulty. just keep the longest chain.
-            assert(newPeriod == oldPeriod);
-            assert(newPeriod == parentPeriod);
-            require(newHeight > latestBlockHeight, "insufficient chain length");
+            require(newPeriod == oldPeriod);
+            require(newPeriod == parentPeriod);
+            if (newHeight <= latestBlockHeight) revert InsufficientChainLength();
         }
 
         // record the new tip height and timestamp
@@ -189,7 +189,7 @@ contract BtcPrism is IBtcPrism {
         uint256 workPerBlock = (2**256 - 1) / target;
 
         uint256 numBlocks = height - (period * 2016) + 1;
-        assert(numBlocks >= 1 && numBlocks <= 2016);
+        require(numBlocks >= 1 && numBlocks <= 2016);
 
         return numBlocks * workPerBlock;
     }
@@ -199,7 +199,7 @@ contract BtcPrism is IBtcPrism {
         returns (uint256 numReorged)
     {
         // compute the block hash
-        assert(blockHeader.length == 80);
+        require(blockHeader.length == 80);
         uint256 blockHashNum = Endian.reverse256(
             uint256(sha256(abi.encode(sha256(blockHeader))))
         );
@@ -218,13 +218,13 @@ contract BtcPrism is IBtcPrism {
             Endian.reverse256(uint256(bytes32(blockHeader[4:36])))
         );
         // Add NUM_BLOCKS so we roll over then subtract one so we go down.
-        require(prevHash == blockHashes[(blockHeight + NUM_BLOCKS - 1) % NUM_BLOCKS], "bad parent");
-        require(prevHash != bytes32(0), "parent block not yet submitted");
+        if (prevHash != blockHashes[(blockHeight + NUM_BLOCKS - 1) % NUM_BLOCKS]) revert BadParent();
+        if (prevHash == bytes32(0)) revert NoParent();
 
         // verify proof-of-work
         bytes32 bits = bytes32(blockHeader[72:76]);
         uint256 target = getTarget(bits);
-        require(blockHashNum < target, "block hash above target");
+        if (blockHashNum >= target) revert HashAboveTarget();
 
         // support once-every-2016-blocks retargeting
         uint256 period = blockHeight / 2016;
@@ -237,12 +237,12 @@ contract BtcPrism is IBtcPrism {
             // Bitcoin testnet has some clown hacks regarding difficulty, see
             // https://blog.lopp.net/the-block-storms-of-bitcoins-testnet/
             if (!isTestnet) {
-                require(target >> 2 < lastTarget, "<25% difficulty retarget");
+                if (target >> 2 >= lastTarget) revert DifficultyRetargetLT25();
             }
             periodToTarget[period] = target;
         } else if (!isTestnet) {
             // verify difficulty
-            require(target == periodToTarget[period], "wrong difficulty bits");
+            if (target != periodToTarget[period]) revert WrongDifficultyBits();
         }
     }
 
