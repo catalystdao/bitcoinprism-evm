@@ -67,6 +67,8 @@ contract BtcPrism is IBtcPrism {
         uint256 _expectedTarget,
         bool _isTestnet
     ) {
+        require(_blockHeight > 2016); // Is needed for unchecked math.
+
         blockHashes[_blockHeight % NUM_BLOCKS] = _blockHash;
         latestBlockHeight = _blockHeight;
         latestBlockTime = _blockTime;
@@ -106,6 +108,10 @@ contract BtcPrism is IBtcPrism {
      * longer) than the chain rooted at getBlockHash(getLatestBlockHeight()).
      */
     function submit(uint256 blockHeight, bytes calldata blockHeaders) public {
+        unchecked {
+        
+        require(blockHeight > 2016); // Is needed for unchecked math.
+
         uint256 numHeaders = blockHeaders.length / 80;
         if (numHeaders * 80 != blockHeaders.length) revert WrongHeaderLength();
         if (numHeaders == 0) revert NoBlocksSubmitted();
@@ -113,15 +119,15 @@ contract BtcPrism is IBtcPrism {
 
         // sanity check: the new chain must not end in a past difficulty period
         uint256 oldPeriod = latestBlockHeight / 2016;
-        uint256 newHeight = blockHeight + numHeaders - 1;
+        uint256 newHeight = blockHeight + numHeaders - 1;  // unchecked: numHeaders is at least 1 and 1-1 = 0.
         uint256 newPeriod = newHeight / 2016;
         if (newPeriod < oldPeriod) revert OldDifficultyPeriod();
 
         // if we crossed a retarget, do extra math to compare chain weight
-        uint256 parentPeriod = (blockHeight - 1) / 2016;
+        uint256 parentPeriod = (blockHeight - 1) / 2016; // unchecked: blockHeight is at least 1.
         uint256 oldWork = 0;
         if (newPeriod > parentPeriod) {
-            require(newPeriod == parentPeriod + 1);
+            require(newPeriod == parentPeriod + 1); // unchecked: parentPeriod is max uint256/2016 < type(uint256).max
             // the submitted chain segment contains a difficulty retarget.
             if (newPeriod == oldPeriod) {
                 // the old canonical chain is past the retarget
@@ -136,22 +142,30 @@ contract BtcPrism is IBtcPrism {
         // verify and store each block
         bytes32 oldTip = getBlockHash(latestBlockHeight);
         uint256 nReorg = 0;
-        for (uint256 i = 0; i < numHeaders; i++) {
-            uint256 blockNum = blockHeight + i;
-            nReorg += submitBlock(blockNum, blockHeaders[80 * i:80 * (i + 1)]);
+        for (uint256 i = 0; i < numHeaders; ++i) {
+            // unchecked: This might overflow if numheaders = type(uint256).max - type(uint256).max/2016. But that is such a massive number
+            // that it is not going to overflow.
+            uint256 blockNum = blockHeight + i;  
+            nReorg += submitBlock(blockNum, blockHeaders[80 * i:80 * (i + 1)]); // unchecked: Overflows if blockHeaders.length == type(uint256).max.
         }
 
         // check that we have a new heaviest chain
         if (newPeriod > parentPeriod) {
             // the submitted chain segment crosses into a new difficulty
             // period. this is happens once every ~2 weeks. check total work
-            bytes calldata lastHeader = blockHeaders[80 * (numHeaders - 1):];
+            bytes calldata lastHeader = blockHeaders[80 * (numHeaders - 1):];  // unchecked: won't overflow since numHeaders*80 is bounded by type(uint256).max
             uint32 newDifficultyBits = Endian.reverse32(
                 uint32(bytes4(lastHeader[72:76]))
             );
 
             uint256 newWork = getWorkInPeriod(newPeriod, newHeight);
             if (newWork <= oldWork) revert InsufficientTotalDifficulty();
+
+            // erase any block hashes above newHeight, now invalidated.
+            // (in case we just accepted a shorter, heavier chain.)
+            for (uint256 i = newHeight + 1; i <= latestBlockHeight; ++i) {
+                blockHeightToHash[i] = 0;
+            }
 
             emit NewTotalDifficultySinceRetarget(
                 newHeight,
@@ -168,8 +182,8 @@ contract BtcPrism is IBtcPrism {
 
         // record the new tip height and timestamp
         latestBlockHeight = uint120(newHeight);
-        uint256 ixT = blockHeaders.length - 12;
-        uint32 time = uint32(bytes4(blockHeaders[ixT:ixT + 4]));
+        uint256 ixT = blockHeaders.length - 12; // blockHeaders.length is at least 80.
+        uint32 time = uint32(bytes4(blockHeaders[ixT:ixT + 4]));  // max ixT = type(uint256).max - 12 => max ixT +4 => type(uint256).max - 12 + 4
         latestBlockTime = Endian.reverse32(time);
 
         // finally, log the new tip
@@ -177,6 +191,8 @@ contract BtcPrism is IBtcPrism {
         emit NewTip(newHeight, latestBlockTime, newTip);
         if (nReorg > 0) {
             emit Reorg(nReorg, oldTip, newTip);
+        }
+
         }
     }
 
@@ -198,6 +214,10 @@ contract BtcPrism is IBtcPrism {
         private
         returns (uint256 numReorged)
     {
+        unchecked {
+
+        require(blockHeight > 2016);
+            
         // compute the block hash
         require(blockHeader.length == 80);
         uint256 blockHashNum = Endian.reverse256(
@@ -218,7 +238,7 @@ contract BtcPrism is IBtcPrism {
             Endian.reverse256(uint256(bytes32(blockHeader[4:36])))
         );
         // Add NUM_BLOCKS so we roll over then subtract one so we go down.
-        if (prevHash != blockHashes[(blockHeight + NUM_BLOCKS - 1) % NUM_BLOCKS]) revert BadParent();
+        if (prevHash != blockHashes[(blockHeight + NUM_BLOCKS - 1) % NUM_BLOCKS]) revert BadParent(); // unchecked: blockHeight >= 1
         if (prevHash == bytes32(0)) revert NoParent();
 
         // verify proof-of-work
@@ -232,7 +252,7 @@ contract BtcPrism is IBtcPrism {
             // Bitcoin enforces a minimum difficulty of 25% of the previous
             // difficulty. Doing the full calculation here does not necessarily
             // add any security. We keep the heaviest chain, not the longest.
-            uint256 lastTarget = periodToTarget[period - 1];
+            uint256 lastTarget = periodToTarget[period - 1]; // blockHeight > 2016 => blockHeight / 2016 > 1 => fine.
             // ignore difficulty update rules on testnet.
             // Bitcoin testnet has some clown hacks regarding difficulty, see
             // https://blog.lopp.net/the-block-storms-of-bitcoins-testnet/
@@ -243,6 +263,8 @@ contract BtcPrism is IBtcPrism {
         } else if (!isTestnet) {
             // verify difficulty
             if (target != periodToTarget[period]) revert WrongDifficultyBits();
+        }
+
         }
     }
 
