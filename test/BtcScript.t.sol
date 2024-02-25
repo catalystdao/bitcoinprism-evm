@@ -5,9 +5,7 @@ import "forge-std/Test.sol";
 
 import { BtcScript} from "../src/library/BtcScript.sol";
 
-contract BtcProofTest is DSTest, BtcScript {
-
-    BtcScript btcScript = new BtcScript();
+contract BtcProofTest is DSTest {
 
     function testGetP2SH() public {
         bytes memory validP2SH = hex"a914ae2f3d4b06579b62574d6178c10c882b9150374087";
@@ -15,11 +13,15 @@ contract BtcProofTest is DSTest, BtcScript {
         bytes memory invalidP2SH2 = hex"a900ae2f3d4b06579b62574d6178c10c882b9150374087";
 
         assertEq(
-            uint160(btcScript.decodeP2SH(validP2SH)),
+            uint160(this.decodeP2SH(validP2SH)),
             0x00ae2f3d4b06579b62574d6178c10c882b91503740
         );
 
-        assertEq(uint160(btcScript.decodeP2SH(invalidP2SH1)), 0);
-        assertEq(uint160(btcScript.decodeP2SH(invalidP2SH2)), 0);
+        assertEq(uint160(this.decodeP2SH(invalidP2SH1)), 0);
+        assertEq(uint160(this.decodeP2SH(invalidP2SH2)), 0);
+    }
+
+    function decodeP2SH(bytes calldata P2SH) external pure returns(bytes20) {
+        return BtcScript.decodeP2SH(P2SH);
     }
 }

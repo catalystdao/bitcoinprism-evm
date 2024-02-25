@@ -26,14 +26,14 @@ struct BitcoinAddress {
  * when they encode or decode Bitcoin scripts.
  * @dev This contract is not intended for on-chain calls.
  */
-contract BtcScript {
+library BtcScript {
 
     //--- Bitcoin Script Decode Helpers ---//
 
     /**
      * @notice Global helper for decoding Bitcoin addresses
      */
-    function getBitcoinAddress(bytes calldata script) external pure returns(BitcoinAddress memory btcAddress) {
+    function getBitcoinAddress(bytes calldata script) internal pure returns(BitcoinAddress memory btcAddress) {
         // Check if P2PKH
         bytes1 firstByte = script[0];
         if (firstByte == OP_DUB) {
@@ -72,7 +72,7 @@ contract BtcScript {
      * @return hash The recipient script hash, or 0 if verification failed.
      */
     function decodeP2SH(bytes calldata script)
-        public
+        internal
         pure
         returns (bytes20)
     {
@@ -91,7 +91,7 @@ contract BtcScript {
      * @return hash The recipient public key hash, or 0 if verification failed.
      */
     function decodeP2PKH(bytes calldata script)
-        public
+        internal
         pure
         returns (bytes20)
     {
@@ -112,7 +112,7 @@ contract BtcScript {
      * @return witPro The witness program, or nothing if verification failed.
      */
     function decodeWitnessProgram(bytes calldata script)
-        public
+        internal
         pure
         returns (int8 version, uint8 witnessLength, bytes32 witPro)
     {
@@ -144,7 +144,7 @@ contract BtcScript {
     /**
      * @notice Global helper for encoding Bitcoin scripts
      */
-    function getBitcoinScript(BitcoinAddress calldata btcAddress) external pure returns(bytes memory script) {
+    function getBitcoinScript(BitcoinAddress calldata btcAddress) internal pure returns(bytes memory script) {
         // Check if segwit
         if (btcAddress.addressType == AddressType.P2PKH) return scriptP2PKH(bytes20(btcAddress.implementationHash));
         if (btcAddress.addressType == AddressType.P2SH) return scriptP2SH(bytes20(btcAddress.implementationHash));
@@ -160,27 +160,27 @@ contract BtcScript {
     }
 
     /// @notice Get the associated script out for a P2PKH address
-    function scriptP2PKH(bytes20 pHash) public pure returns(bytes memory) {
+    function scriptP2PKH(bytes20 pHash) internal pure returns(bytes memory) {
         // OP_DUB, OP_HASH160, <pubKeyHash 20>, OP_EQUALVERIFY, OP_CHECKSIG
         return bytes.concat(OP_DUB, OP_HASH160, PUSH_20, pHash, OP_EQUALVERIFY, OP_CHECKSIG);
     }
 
     /// @notice Get the associated script out for a P2SH address
-    function scriptP2SH(bytes20 sHash) public pure returns(bytes memory) {
+    function scriptP2SH(bytes20 sHash) internal pure returns(bytes memory) {
         // OP_HASH160, <data 20>, OP_EQUAL
         return bytes.concat(OP_HASH160, PUSH_20, sHash, OP_EQUAL);
     }
 
-    function scriptP2WPKH(bytes20 witnessProgram) public pure returns(bytes memory) {
+    function scriptP2WPKH(bytes20 witnessProgram) internal pure returns(bytes memory) {
         // OP_0, <data 20>
         return bytes.concat(OP_0, PUSH_20, witnessProgram);
     }
 
-    function scriptP2WSH(bytes32 witnessProgram) public pure returns(bytes memory) {
+    function scriptP2WSH(bytes32 witnessProgram) internal pure returns(bytes memory) {
         return bytes.concat(OP_0, PUSH_32, witnessProgram);
     }
 
-    function scriptP2TR(bytes32 witnessProgram) public pure returns(bytes memory) {
+    function scriptP2TR(bytes32 witnessProgram) internal pure returns(bytes memory) {
         return bytes.concat(OP_0, PUSH_32, witnessProgram);
     }
 }
