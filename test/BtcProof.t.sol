@@ -10,10 +10,9 @@ contract MockBtcProof {
         bytes32 blockHash,
         BtcTxProof calldata txProof,
         uint256 txOutIx,
-        bytes calldata outputScript,
-        uint256 satoshisExpected
-    ) external pure returns (bool) {
-        return BtcProof.validateExactOut(blockHash, txProof, txOutIx, outputScript, satoshisExpected);
+        bytes calldata outputScript
+    ) external pure returns (uint256) {
+        return BtcProof.validateExactOut(blockHash, txProof, txOutIx, outputScript);
     }
 
     function getBlockHash(bytes calldata blockHeader)
@@ -301,11 +300,14 @@ contract BtcProofTest is DSTest {
         bytes memory destScript = hex"a914ae2f3d4b06579b62574d6178c10c882b9150374087";
 
         // Should succeed
-        BtcProofUtils.validateExactOut(
+        uint256 measuredOut = BtcProofUtils.validateExactOut(
             blockHash736000,
             BtcTxProof(header736000, txId736, 1, txProof736, tx736),
             0,
-            destScript,
+            destScript
+        );
+        assertEq(
+            measuredOut,
             25200000
         );
 
@@ -315,8 +317,7 @@ contract BtcProofTest is DSTest {
             blockHash717695,
             BtcTxProof(header736000, txId736, 1, txProof736, tx736),
             0,
-            destScript,
-            25200000
+            destScript
         );
 
         // - Bad tx proof (doesn't match root)
@@ -325,8 +326,7 @@ contract BtcProofTest is DSTest {
             blockHash717695,
             BtcTxProof(headerGood, txId736, 1, txProof736, tx736),
             0,
-            destScript,
-            25200000
+            destScript
         );
 
         // - Wrong tx index
@@ -335,8 +335,7 @@ contract BtcProofTest is DSTest {
             blockHash736000,
             BtcTxProof(header736000, txId736, 2, txProof736, tx736),
             0,
-            destScript,
-            25200000
+            destScript
         );
 
         // - Wrong tx output index
@@ -345,8 +344,7 @@ contract BtcProofTest is DSTest {
             blockHash736000,
             BtcTxProof(header736000, txId736, 1, txProof736, tx736),
             1,
-            destScript,
-            25200000
+            destScript
         );
 
         // - Wrong dest script hash
@@ -355,18 +353,7 @@ contract BtcProofTest is DSTest {
             blockHash736000,
             BtcTxProof(header736000, txId736, 1, txProof736, tx736),
             0,
-            hex"abcd",
-            25200000
-        );
-
-        // - Wrong amount, off by one satoshi
-        vm.expectRevert(abi.encodeWithSelector(AmountMismatch.selector, 25200000, 25200001));
-        BtcProofUtils.validateExactOut(
-            blockHash736000,
-            BtcTxProof(header736000, txId736, 1, txProof736, tx736),
-            0,
-            destScript,
-            25200001
+            hex"abcd"
         );
     }
 }

@@ -86,19 +86,16 @@ contract BtcTxVerifierTest is DSTest {
             tx736
         );
 
-        assertTrue(verif.verifyPayment(1, 736000, txP, 0, destScript, 25200000));
+        assertEq(verif.verifyPayment(1, 736000, txP, 0, destScript), 25200000);
 
         vm.expectRevert(abi.encodeWithSelector(TooFewConfirmations.selector, 1, 2));
-        assertTrue(!verif.verifyPayment(2, 736000, txP, 0, destScript, 25200000));
-
-        vm.expectRevert(abi.encodeWithSelector(AmountMismatch.selector, 25200000, 25200001));
-        assertTrue(!verif.verifyPayment(1, 736000, txP, 0, destScript, 25200001));
+        assertEq(verif.verifyPayment(2, 736000, txP, 0, destScript), 0);
 
         vm.expectRevert(abi.encodeWithSelector(ScriptMismatch.selector, hex"a91415ecf89e95eb07fbc351b3f7f4c54406f7ee5c1087", hex"a914ae2f3d4b06579b62574d6178c10c882b9150374087"));
-        assertTrue(!verif.verifyPayment(1, 736000, txP, 1, destScript, 25200000));
+        assertEq(verif.verifyPayment(1, 736000, txP, 1, destScript), 0);
 
         vm.expectRevert(abi.encodeWithSelector(BlockHashMismatch.selector, 0x00000000000000000002d52d9816a419b45f1f0efe9a9df4f7b64161e508323d, 0x0000000000000000000000000000000000000000000000000000000000000000));
-        assertTrue(!verif.verifyPayment(1, 700000, txP, 0, destScript, 25200000));
+        assertEq(verif.verifyPayment(1, 700000, txP, 0, destScript), 0);
     }
 
     function testVerifySegwitTx() public {
@@ -149,6 +146,6 @@ contract BtcTxVerifierTest is DSTest {
             tx39
         );
 
-        assertTrue(verif.verifyPayment(1, 831400, txP, 0, destScript, 3270000));
+        assertEq(verif.verifyPayment(1, 831400, txP, 0, destScript), 3270000);
     }
 }

@@ -20,9 +20,8 @@ interface IBtcTxVerifier {
         uint256 blockNum,
         BtcTxProof calldata inclusionProof,
         uint256 txOutIx,
-        bytes calldata outputScript,
-        uint256 amountSats
-    ) external view returns (bool);
+        bytes calldata outputScript
+    ) external view returns (uint256 amountSats);
 
     /** @notice Returns the underlying mirror associated with this verifier. */
     function mirror() external view returns (IBtcPrism);

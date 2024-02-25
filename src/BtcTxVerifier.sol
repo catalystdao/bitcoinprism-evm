@@ -21,9 +21,8 @@ contract BtcTxVerifier is IBtcTxVerifier {
         uint256 blockNum,
         BtcTxProof calldata inclusionProof,
         uint256 txOutIx,
-        bytes calldata outputScript,
-        uint256 amountSats
-    ) external view returns (bool) {
+        bytes calldata outputScript
+    ) external view returns (uint256 sats) {
         {
             uint256 currentHeight = mirror.getLatestBlockHeight();
 
@@ -36,17 +35,12 @@ contract BtcTxVerifier is IBtcTxVerifier {
 
         bytes32 blockHash = mirror.getBlockHash(blockNum);
 
-        if(
-            !BtcProof.validateExactOut(
-                blockHash,
-                inclusionProof,
-                txOutIx,
-                outputScript,
-                amountSats
-            )
-        ) revert InvalidProof();
-
-        return true;
+        return sats = BtcProof.validateExactOut(
+            blockHash,
+            inclusionProof,
+            txOutIx,
+            outputScript
+        );
     }
 
     function verifyOrdinal(

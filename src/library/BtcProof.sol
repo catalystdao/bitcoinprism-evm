@@ -20,7 +20,7 @@ library BtcProof {
      * @dev Validates that a given payment appears under a given block hash.
      *
      * This verifies all of the following:
-     * 1. Raw transaction contains a transcation that pay X satoshis to the specified output script
+     * 1. Raw transaction contains an output to the specified output script
      * 2. Raw transaction hashes to the given transaction ID.
      * 3. Transaction ID appears under transaction root (Merkle proof).
      * 4. Transaction root is part of the block header.
@@ -34,9 +34,8 @@ library BtcProof {
         bytes32 blockHash,
         BtcTxProof calldata txProof,
         uint256 txOutIx,
-        bytes calldata outputScript,
-        uint256 satoshisExpected
-    ) internal pure returns (bool) {
+        bytes calldata outputScript
+    ) internal pure returns (uint256) {
         // 5. Block header to block hash
         
         bytes32 blockHeaderBlockHash = getBlockHash(txProof.blockHeader);
@@ -64,11 +63,8 @@ library BtcProof {
         } else {
             if (keccak256(txo.script) != keccak256(outputScript)) revert ScriptMismatch(txo.script, outputScript);
         }
-        if (txo.valueSats != satoshisExpected) revert AmountMismatch(txo.valueSats, satoshisExpected);
-
-        // We've verified that blockHash contains a transaction with correct script
-        // that sends at least satoshisExpected to the given hash.
-        return true;
+        // We've verified that blockHash contains a transaction with an output to the correct script.
+        return txo.valueSats;
     }
 
     /**
