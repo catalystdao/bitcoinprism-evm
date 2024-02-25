@@ -21,7 +21,7 @@ contract BtcTxVerifier is IBtcTxVerifier {
         uint256 blockNum,
         BtcTxProof calldata inclusionProof,
         uint256 txOutIx,
-        bytes calldata destScriptHash,
+        bytes calldata outputScript,
         uint256 amountSats
     ) external view returns (bool) {
         {
@@ -41,7 +41,42 @@ contract BtcTxVerifier is IBtcTxVerifier {
                 blockHash,
                 inclusionProof,
                 txOutIx,
-                destScriptHash,
+                outputScript,
+                amountSats
+            )
+        ) revert InvalidProof();
+
+        return true;
+    }
+
+    function verifyOrdinal(
+        uint256 minConfirmations,
+        uint256 blockNum,
+        BtcTxProof calldata inclusionProof,
+        uint256 txInId,
+        uint32 txInPrevTxIndex,
+        bytes calldata outputScript,
+        uint256 amountSats
+    ) external view returns (bool) {
+        {
+            uint256 currentHeight = mirror.getLatestBlockHeight();
+
+            if (currentHeight < blockNum) revert NoBlock(currentHeight, blockNum);
+
+            unchecked {
+                if (currentHeight + 1 - blockNum < minConfirmations) revert TooFewConfirmations(currentHeight + 1 - blockNum, minConfirmations);
+            }
+        }
+
+        bytes32 blockHash = mirror.getBlockHash(blockNum);
+
+        if(
+            !BtcProof.validateOrdinalTransfer(
+                blockHash,
+                inclusionProof,
+                txInId,
+                txInPrevTxIndex,
+                outputScript,
                 amountSats
             )
         ) revert InvalidProof();
