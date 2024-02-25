@@ -77,7 +77,7 @@ library BtcProof {
         returns (bytes32)
     {
         require(blockHeader.length == 80);
-        bytes32 ret = sha256(abi.encodePacked(sha256(blockHeader)));
+        bytes32 ret = sha256(bytes.concat(sha256(blockHeader)));
         return bytes32(Endian.reverse256(uint256(ret)));
     }
 
@@ -127,7 +127,7 @@ library BtcProof {
      * @dev Computes the ubiquitious Bitcoin SHA256(SHA256(x))
      */
     function doubleSha(bytes memory buf) internal pure returns (bytes32) {
-        return sha256(abi.encodePacked(sha256(buf)));
+        return sha256(bytes.concat(sha256(buf)));
     }
 
     /**
