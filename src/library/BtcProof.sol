@@ -174,21 +174,17 @@ library BtcProof {
         for (uint256 i = 0; i < nInputs; ++i) {
             BitcoinTxIn memory txIn;
             txIn.prevTxID = Endian.reverse256(
-                uint256(bytes32(rawTx[offset:offset + 32]))
+                uint256(bytes32(rawTx[offset:offset += 32]))
             );
-            offset += 32;
             txIn.prevTxIndex = Endian.reverse32(
-                uint32(bytes4(rawTx[offset:offset + 4]))
+                uint32(bytes4(rawTx[offset:offset += 4]))
             );
-            offset += 4;
             uint256 nInScriptBytes;
-            (nInScriptBytes, offset) = readVarInt(rawTx, offset);
-            txIn.script = rawTx[offset:offset + nInScriptBytes];
-            offset += nInScriptBytes;
+            ( nInScriptBytes, offset) = readVarInt(rawTx, offset);
+            txIn.script = rawTx[offset:offset += nInScriptBytes];
             txIn.seqNo = Endian.reverse32(
-                uint32(bytes4(rawTx[offset:offset + 4]))
+                uint32(bytes4(rawTx[offset:offset += 4]))
             );
-            offset += 4;
             ret.inputs[i] = txIn;
         }
 
@@ -199,21 +195,18 @@ library BtcProof {
         for (uint256 i = 0; i < nOutputs; ++i) {
             BitcoinTxOut memory txOut;
             txOut.valueSats = Endian.reverse64(
-                uint64(bytes8(rawTx[offset:offset + 8]))
+                uint64(bytes8(rawTx[offset:offset += 8]))
             );
-            offset += 8;
             uint256 nOutScriptBytes;
             (nOutScriptBytes, offset) = readVarInt(rawTx, offset);
-            txOut.script = rawTx[offset:offset + nOutScriptBytes];
-            offset += nOutScriptBytes;
+            txOut.script = rawTx[offset:offset += nOutScriptBytes];
             ret.outputs[i] = txOut;
         }
 
         // Finally, read locktime, the last four bytes in the tx.
         ret.locktime = Endian.reverse32(
-            uint32(bytes4(rawTx[offset:offset + 4]))
+            uint32(bytes4(rawTx[offset:offset += 4]))
         );
-        offset += 4;
         if (offset != rawTx.length) {
             return ret; // Extra data at end of transaction.
         }
@@ -237,18 +230,19 @@ library BtcProof {
         uint8 pivot = uint8(buf[offset]);
         if (pivot < 0xfd) {
             val = pivot;
-            newOffset = offset + 1;
-        } else if (pivot == 0xfd) {
-            val = Endian.reverse16(uint16(bytes2(buf[offset + 1:offset + 3])));
-            newOffset = offset + 3;
-        } else if (pivot == 0xfe) {
-            val = Endian.reverse32(uint32(bytes4(buf[offset + 1:offset + 5])));
-            newOffset = offset + 5;
-        } else {
-            // pivot == 0xff
-            val = Endian.reverse64(uint64(bytes8(buf[offset + 1:offset + 9])));
-            newOffset = offset + 9;
+            return (val, newOffset = offset + 1);
         }
+        if (pivot == 0xfd) {
+            val = Endian.reverse16(uint16(bytes2(buf[offset + 1:offset + 3])));
+            return (val, newOffset = offset + 3);
+        }
+        if (pivot == 0xfe) {
+            val = Endian.reverse32(uint32(bytes4(buf[offset + 1:offset + 5])));
+            return (val, newOffset = offset + 5);
+        }
+        // pivot == 0xff
+        val = Endian.reverse64(uint64(bytes8(buf[offset + 1:offset + 9])));
+        return (val, newOffset = offset + 9);
 
         }
     }
