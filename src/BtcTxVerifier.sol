@@ -16,13 +16,13 @@ contract BtcTxVerifier is IBtcTxVerifier {
         mirror = _mirror;
     }
 
-    function verifyPayment(
+    function _verifyPayment(
         uint256 minConfirmations,
         uint256 blockNum,
         BtcTxProof calldata inclusionProof,
         uint256 txOutIx,
         bytes calldata outputScript
-    ) external view returns (uint256 sats) {
+    ) internal view returns (uint256 sats) {
         {
             uint256 currentHeight = mirror.getLatestBlockHeight();
 
@@ -43,7 +43,17 @@ contract BtcTxVerifier is IBtcTxVerifier {
         );
     }
 
-    function verifyOrdinal(
+    function verifyPayment(
+        uint256 minConfirmations,
+        uint256 blockNum,
+        BtcTxProof calldata inclusionProof,
+        uint256 txOutIx,
+        bytes calldata outputScript
+    ) external view returns (uint256 sats) {
+        return _verifyPayment(minConfirmations, blockNum, inclusionProof, txOutIx, outputScript);
+    }
+
+    function _verifyOrdinal(
         uint256 minConfirmations,
         uint256 blockNum,
         BtcTxProof calldata inclusionProof,
@@ -51,7 +61,7 @@ contract BtcTxVerifier is IBtcTxVerifier {
         uint32 txInPrevTxIndex,
         bytes calldata outputScript,
         uint256 amountSats
-    ) external view returns (bool) {
+    ) internal view returns (bool) {
         {
             uint256 currentHeight = mirror.getLatestBlockHeight();
 
@@ -76,5 +86,17 @@ contract BtcTxVerifier is IBtcTxVerifier {
         ) revert InvalidProof();
 
         return true;
+    }
+
+    function verifyOrdinal(
+        uint256 minConfirmations,
+        uint256 blockNum,
+        BtcTxProof calldata inclusionProof,
+        uint256 txInId,
+        uint32 txInPrevTxIndex,
+        bytes calldata outputScript,
+        uint256 amountSats
+    ) external view returns(bool) {
+        return _verifyOrdinal(minConfirmations, blockNum, inclusionProof, txInId, txInPrevTxIndex, outputScript, amountSats);
     }
 }
