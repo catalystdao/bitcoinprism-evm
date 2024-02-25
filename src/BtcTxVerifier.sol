@@ -37,7 +37,7 @@ contract BtcTxVerifier is IBtcTxVerifier {
         bytes32 blockHash = mirror.getBlockHash(blockNum);
 
         if(
-            !BtcProof.validateScriptMatch(
+            !BtcProof.validateExactOut(
                 blockHash,
                 inclusionProof,
                 txOutIx,
