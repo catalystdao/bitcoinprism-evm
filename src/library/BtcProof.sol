@@ -72,7 +72,7 @@ library BtcProof {
     }
 
     /**
-     * @dev Validates that a given transfer of ordinal(s) under a given block hash..
+     * @dev Validates that a given transfer of ordinal(s) appears under a given block hash.
      *
      * This verifies all of the following:
      * 1. Raw transaction contains a specific input (at index 0) that pays more than X to specific output (at index 0).
@@ -118,7 +118,7 @@ library BtcProof {
         // Check if correct input transaction is used.
         if (txInId != txInput.prevTxID) revert InvalidTxInHash(txInId, txInput.prevTxID);
         // Check if correct index of that transaction is used.
-        if (txInPrevTxIndex == txInput.prevTxIndex) revert InvalidTxInIndex(txInPrevTxIndex, txInput.prevTxIndex);
+        if (txInPrevTxIndex != txInput.prevTxIndex) revert InvalidTxInIndex(txInPrevTxIndex, txInput.prevTxIndex);
 
         BitcoinTxOut memory txo = parsedTx.outputs[0];
         // if the length are less than 32, then use bytes32 to compare.
