@@ -4,6 +4,7 @@ pragma solidity >=0.8.0;
 // Opcodes
 bytes1 constant OP_0 = 0x00;
 bytes1 constant PUSH_20 = 0x14;
+bytes1 constant PUSH_32 = 0x20;
 bytes1 constant PUSH_75 = 0x4b;
 bytes1 constant OP_PUSHDATA1 = 0x4c;
 bytes1 constant OP_PUSHDATA2 = 0x4d;
