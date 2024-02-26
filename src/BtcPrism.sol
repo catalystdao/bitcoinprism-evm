@@ -201,13 +201,19 @@ contract BtcPrism is IBtcPrism {
         view
         returns (uint256)
     {
+        unchecked {
+
         uint256 target = periodToTarget[period];
         uint256 workPerBlock = (2**256 - 1) / target;
 
-        uint256 numBlocks = height - (period * 2016) + 1;
+        // unchecked: period is not raw from input but parsed as newHeight/2016.
+        // as such, we can multiply it by 2016.
+        uint256 numBlocks = height - (period * 2016) + 1;  
         require(numBlocks >= 1 && numBlocks <= 2016);
 
         return numBlocks * workPerBlock;
+
+        }
     }
 
     function submitBlock(uint256 blockHeight, bytes calldata blockHeader)
