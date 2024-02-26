@@ -91,7 +91,7 @@ contract BtcTxVerifierTest is DSTest {
         vm.expectRevert(abi.encodeWithSelector(TooFewConfirmations.selector, 1, 2));
         assertEq(verif.verifyPayment(2, 736000, txP, 0, destScript), 0);
 
-        vm.expectRevert(abi.encodeWithSelector(ScriptMismatch.selector, hex"a91415ecf89e95eb07fbc351b3f7f4c54406f7ee5c1087", hex"a914ae2f3d4b06579b62574d6178c10c882b9150374087"));
+        vm.expectRevert(abi.encodeWithSelector(ScriptMismatch.selector,  hex"a914ae2f3d4b06579b62574d6178c10c882b9150374087", hex"a91415ecf89e95eb07fbc351b3f7f4c54406f7ee5c1087"));
         assertEq(verif.verifyPayment(1, 736000, txP, 1, destScript), 0);
 
         vm.expectRevert(abi.encodeWithSelector(BlockHashMismatch.selector, 0x00000000000000000002d52d9816a419b45f1f0efe9a9df4f7b64161e508323d, 0x0000000000000000000000000000000000000000000000000000000000000000));

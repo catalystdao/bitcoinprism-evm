@@ -20,7 +20,7 @@ library BtcProof {
      * @dev Validates that a given payment appears under a given block hash.
      *
      * This verifies all of the following:
-     * 1. Raw transaction contains an output to the specified output script
+     * 1. Raw transaction contains an output to txOutIx.
      * 2. Raw transaction hashes to the given transaction ID.
      * 3. Transaction ID appears under transaction root (Merkle proof).
      * 4. Transaction root is part of the block header.
@@ -30,12 +30,11 @@ library BtcProof {
      *
      * Always returns true or reverts with a descriptive reason.
      */
-    function validateExactOut(
+    function validateTx(
         bytes32 blockHash,
         BtcTxProof calldata txProof,
-        uint256 txOutIx,
-        bytes calldata outputScript
-    ) internal pure returns (uint256) {
+        uint256 txOutIx
+    ) internal pure returns (uint256 sats, bytes memory outputScript) {
         // 5. Block header to block hash
         
         bytes32 blockHeaderBlockHash = getBlockHash(txProof.blockHeader);
@@ -54,17 +53,12 @@ library BtcProof {
         bytes32 rawTxId = getTxID(txProof.rawTx);
         if (rawTxId != txProof.txId) revert TxIDMismatch(rawTxId, txProof.txId);
 
-        // 1. Finally, validate raw transaction pays stated recipient.
+        // 1. Finally, validate raw transaction and get relevant values.
         BitcoinTx memory parsedTx = parseBitcoinTx(txProof.rawTx);
         BitcoinTxOut memory txo = parsedTx.outputs[txOutIx];
-        // if the length are less than 32, then use bytes32 to compare.
-        if  (txo.script.length <= 32 && outputScript.length <= 32) {
-            if (bytes32(txo.script) != bytes32(outputScript)) revert ScriptMismatch(txo.script, outputScript);
-        } else {
-            if (keccak256(txo.script) != keccak256(outputScript)) revert ScriptMismatch(txo.script, outputScript);
-        }
-        // We've verified that blockHash contains a transaction with an output to the correct script.
-        return txo.valueSats;
+
+        outputScript = txo.script;
+        sats = txo.valueSats;
     }
 
     /**
@@ -118,17 +112,41 @@ library BtcProof {
 
         BitcoinTxOut memory txo = parsedTx.outputs[0];
         // if the length are less than 32, then use bytes32 to compare.
-        if  (txo.script.length <= 32 && outputScript.length <= 32) {
-            if (bytes32(txo.script) != bytes32(outputScript)) revert ScriptMismatch(txo.script, outputScript);
-        } else {
-            if (keccak256(txo.script) != keccak256(outputScript)) revert ScriptMismatch(txo.script, outputScript);
-        }
+        if (!compareScriptsCM(outputScript, txo.script)) revert ScriptMismatch(outputScript, txo.script);
+
         // We allow for sending more because of the dust limit which may cause problems.
         if (txo.valueSats < satoshisExpected) revert AmountMismatch(txo.valueSats, satoshisExpected);
 
         // We've verified that blockHash contains a transaction with correct script
         // that sends at least satoshisExpected to the given hash.
         return true;
+    }
+
+    /** @dev Compare 2 scripts, if they are less than 32 bytes directly compare otherwise by hash. */
+    function compareScriptsCC(bytes calldata a, bytes calldata b) internal pure returns(bool) {
+        if  (a.length <= 32 && b.length <= 32) {
+            return bytes32(a) == bytes32(b);
+        } else {
+            return keccak256(a) == keccak256(b);
+        }
+    }
+
+    /** @dev Compare 2 scripts, if they are less than 32 bytes directly compare otherwise by hash. */
+    function compareScripts(bytes memory a, bytes memory b) internal pure returns(bool) {
+        if  (a.length <= 32 && b.length <= 32) {
+            return bytes32(a) == bytes32(b);
+        } else {
+            return keccak256(a) == keccak256(b);
+        }
+    }
+
+    /** @dev Compare 2 scripts, if they are less than 32 bytes directly compare otherwise by hash. */
+    function compareScriptsCM(bytes calldata a, bytes memory b) internal pure returns(bool) {
+        if  (a.length <= 32 && b.length <= 32) {
+            return bytes32(a) == bytes32(b);
+        } else {
+            return keccak256(a) == keccak256(b);
+        }
     }
 
     /**

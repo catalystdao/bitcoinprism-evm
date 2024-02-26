@@ -3,7 +3,7 @@ pragma solidity >=0.8.0;
 
 import { IBtcPrism } from "./interfaces/IBtcPrism.sol";
 import { IBtcTxVerifier } from "./interfaces/IBtcTxVerifier.sol";
-import { BtcProof, BtcTxProof } from "./library/BtcProof.sol";
+import { BtcProof, BtcTxProof, ScriptMismatch } from "./library/BtcProof.sol";
 import { NoBlock, TooFewConfirmations, InvalidProof } from "./interfaces/IBtcTxVerifier.sol";
 
 // BtcVerifier implements a merkle proof that a Bitcoin payment succeeded. It
@@ -35,12 +35,14 @@ contract BtcTxVerifier is IBtcTxVerifier {
 
         bytes32 blockHash = mirror.getBlockHash(blockNum);
 
-        return sats = BtcProof.validateExactOut(
+        bytes memory txOutScript;
+        (sats, txOutScript) = BtcProof.validateTx(
             blockHash,
             inclusionProof,
-            txOutIx,
-            outputScript
+            txOutIx
         );
+
+        if (!BtcProof.compareScriptsCM(outputScript, txOutScript)) revert ScriptMismatch(outputScript, txOutScript);
     }
 
     function verifyPayment(
