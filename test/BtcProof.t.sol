@@ -296,7 +296,6 @@ contract BtcProofTest is DSTest {
     // 1,2,3,4,5. putting it all together, verify a payment.
     function testValidatePayment() public {
         bytes32 txId736 = 0x3667d5beede7d89e41b0ec456f99c93d6cc5e5caff4c4a5f993caea477b4b9b9;
-        bytes memory destScript = hex"a914ae2f3d4b06579b62574d6178c10c882b9150374087";
 
         // Should succeed
         (uint256 measuredOut, ) = BtcProofUtils.validateTx(
