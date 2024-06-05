@@ -151,7 +151,7 @@ library BtcScript {
         if (btcAddress.addressType == AddressType.P2WPKH) {
             return scriptP2WPKH(bytes20(btcAddress.implementationHash));
         }
-        if (btcAddress.addressType == AddressType.P2SH) {
+        if (btcAddress.addressType == AddressType.P2WSH) {
             return scriptP2WSH(btcAddress.implementationHash);
         }
         if (btcAddress.addressType == AddressType.P2TR) {
