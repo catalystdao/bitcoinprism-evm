@@ -159,6 +159,26 @@ library BtcScript {
         }
     }
 
+    /**
+     * @notice Global helper for encoding Bitcoin scripts
+     * @param addressType Enum of address type. Used to specify which script is used.
+     * @param implementationHash P2PKH, address hash or P2SH, script hash.
+     */
+    function getBitcoinScript(AddressType addressType, bytes32 implementationHash) internal pure returns(bytes memory script) {
+        // Check if segwit
+        if (addressType == AddressType.P2PKH) return scriptP2PKH(bytes20(implementationHash));
+        if (addressType == AddressType.P2SH) return scriptP2SH(bytes20(implementationHash));
+        if (addressType == AddressType.P2WPKH) {
+            return scriptP2WPKH(bytes20(implementationHash));
+        }
+        if (addressType == AddressType.P2SH) {
+            return scriptP2WSH(implementationHash);
+        }
+        if (addressType == AddressType.P2TR) {
+            return scriptP2TR(implementationHash);
+        }
+    }
+
     /// @notice Get the associated script out for a P2PKH address
     function scriptP2PKH(bytes20 pHash) internal pure returns(bytes memory) {
         // OP_DUB, OP_HASH160, <pubKeyHash 20>, OP_EQUALVERIFY, OP_CHECKSIG
