@@ -201,6 +201,6 @@ library BtcScript {
     }
 
     function scriptP2TR(bytes32 witnessProgram) internal pure returns(bytes memory) {
-        return bytes.concat(OP_0, PUSH_32, witnessProgram);
+        return bytes.concat(OP_1, PUSH_32, witnessProgram);
     }
 }
