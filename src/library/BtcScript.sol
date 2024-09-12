@@ -27,6 +27,7 @@ struct BitcoinAddress {
  * @dev This contract is not intended for on-chain calls.
  */
 library BtcScript {
+    error ScriptTooLong(uint256 length);
 
     //--- Bitcoin Script Decode Helpers ---//
 
@@ -202,5 +203,29 @@ library BtcScript {
 
     function scriptP2TR(bytes32 witnessProgram) internal pure returns(bytes memory) {
         return bytes.concat(OP_1, PUSH_32, witnessProgram);
+    }
+
+    /**
+     * @notice Creates the expected OP_RETURN script to embed data onto the Bitcoin blockchain.
+     * @dev Maximum script length is type(uint32).max. Empty script returns [OP_RETURN, OP_0].
+     */
+    function embedOpReturn(bytes calldata returnScript) internal pure returns(bytes memory) {
+        uint256 scriptLength = returnScript.length;
+        // If the script length is 0, there is no valid script that describes that.
+        // The closest approximation is:
+        if (scriptLength == 0) return bytes.concat(OP_RETURN, OP_0);
+        // Pushing between 1 and 75 bytes is done with their respective opcode
+        // which helpfully is the opcodes 0x01 to 0x4b (75)
+        if (scriptLength <= 75) return bytes.concat(OP_RETURN, bytes1(uint8(scriptLength)), returnScript);
+        // If script length is more than than 75, we need to use the longer push codes.
+        // The first one 0x4c allows us to specify with 1 byte how many bytes to push:
+        if (scriptLength <= type(uint8).max) bytes.concat(OP_RETURN, OP_PUSHDATA1, bytes1(uint8(scriptLength)), returnScript);
+        // The next 0x4d allows us to specify with 2 bytes
+        if (scriptLength <= type(uint16).max) bytes.concat(OP_RETURN, OP_PUSHDATA2, bytes2(uint16(scriptLength)), returnScript);
+        // The next 0x4e allows us to specify with 4 bytes
+        if (scriptLength <= type(uint32).max) bytes.concat(OP_RETURN, OP_PUSHDATA4, bytes4(uint32(scriptLength)), returnScript);
+
+        // We can't add all script data.
+        revert ScriptTooLong(scriptLength);
     }
 }

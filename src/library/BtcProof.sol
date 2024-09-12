@@ -20,7 +20,6 @@ library BtcProof {
      * @dev Validates that a given payment appears under a given block hash.
      *
      * This verifies all of the following:
-     * 1. Raw transaction contains an output to txOutIx.
      * 2. Raw transaction hashes to the given transaction ID.
      * 3. Transaction ID appears under transaction root (Merkle proof).
      * 4. Transaction root is part of the block header.
@@ -30,11 +29,10 @@ library BtcProof {
      *
      * Always returns true or reverts with a descriptive reason.
      */
-    function validateTx(
+    function subValidate(
         bytes32 blockHash,
-        BtcTxProof calldata txProof,
-        uint256 txOutIx
-    ) internal pure returns (uint256 sats, bytes memory outputScript) {
+        BtcTxProof calldata txProof
+    ) internal pure returns (BitcoinTx memory parsedTx) {
         // 5. Block header to block hash
         
         bytes32 blockHeaderBlockHash = getBlockHash(txProof.blockHeader);
@@ -54,7 +52,26 @@ library BtcProof {
         if (rawTxId != txProof.txId) revert TxIDMismatch(rawTxId, txProof.txId);
 
         // 1. Finally, validate raw transaction and get relevant values.
-        BitcoinTx memory parsedTx = parseBitcoinTx(txProof.rawTx);
+        parsedTx = parseBitcoinTx(txProof.rawTx);
+    }
+
+    /**
+     * @dev Validates that a given payment appears under a given block hash.
+     *
+     * This verifies all of the following:
+     * 1. Raw transaction contains an output to txOutIx.
+     *
+     * The caller must separately verify that the block hash is in the chain.
+     *
+     * Always returns true or reverts with a descriptive reason.
+     */
+    function validateTx(
+        bytes32 blockHash,
+        BtcTxProof calldata txProof,
+        uint256 txOutIx
+    ) internal pure returns (uint256 sats, bytes memory outputScript) {
+        // 1. Finally, validate raw transaction and get relevant values.
+        BitcoinTx memory parsedTx = subValidate(blockHash, txProof);
         BitcoinTxOut memory txo = parsedTx.outputs[txOutIx];
 
         outputScript = txo.script;
@@ -62,14 +79,33 @@ library BtcProof {
     }
 
     /**
+     * @dev Fork of validateTx that also returns the output script of the next output.
+     * Will revert if no output exists after the specific output (for sats / output script).
+     * @param returnScript Note that this may not actually be a return script. Please validate that the
+     * structure is correct.
+     */
+    function validateTxData(
+        bytes32 blockHash,
+        BtcTxProof calldata txProof,
+        uint256 txOutIx
+    ) internal pure returns (uint256 sats, bytes memory outputScript, bytes memory returnScript) {
+        // 1. Finally, validate raw transaction and get relevant values.
+        BitcoinTx memory parsedTx = subValidate(blockHash, txProof);
+        BitcoinTxOut memory txo = parsedTx.outputs[txOutIx];
+
+        outputScript = txo.script;
+        sats = txo.valueSats;
+        unchecked {
+            // Load the return script from the next output of the transaction.
+            returnScript = parsedTx.outputs[txOutIx + 1].script;
+        }
+    }
+
+    /**
      * @dev Validates that a given transfer of ordinal(s) appears under a given block hash.
      *
      * This verifies all of the following:
      * 1. Raw transaction contains a specific input (at index 0) that pays more than X to specific output (at index 0).
-     * 2. Raw transaction hashes to the given transaction ID.
-     * 3. Transaction ID appears under transaction root (Merkle proof).
-     * 4. Transaction root is part of the block header.
-     * 5. Block header hashes to a given block hash.
      *
      * The caller must separately verify that the block hash is in the chain.
      *
@@ -83,27 +119,9 @@ library BtcProof {
         bytes calldata outputScript,
         uint256 satoshisExpected
     ) internal pure returns (bool) {
-        // 5. Block header to block hash
-        
-        bytes32 blockHeaderBlockHash = getBlockHash(txProof.blockHeader);
-        if (blockHeaderBlockHash != blockHash) revert BlockHashMismatch(blockHeaderBlockHash, blockHash);
-
-        // 4. and 3. Transaction ID included in block
-        bytes32 blockTxRoot = getBlockTxMerkleRoot(txProof.blockHeader);
-        bytes32 txRoot = getTxMerkleRoot(
-            txProof.txId,
-            txProof.txIndex,
-            txProof.txMerkleProof
-        );
-        if (blockTxRoot != txRoot) revert TxMerkleRootMismatch(blockTxRoot, txRoot);
-
-        // 2. Raw transaction to TxID
-        bytes32 rawTxId = getTxID(txProof.rawTx);
-        if (rawTxId != txProof.txId) revert TxIDMismatch(rawTxId, txProof.txId);
-
         // 1. Finally, validate raw transaction correctly transfers the ordinal(s).
         // Parse transaction
-        BitcoinTx memory parsedTx = parseBitcoinTx(txProof.rawTx);
+        BitcoinTx memory parsedTx = subValidate(blockHash, txProof);
         BitcoinTxIn memory txInput = parsedTx.inputs[0];
         // Check if correct input transaction is used.
         if (txInId != txInput.prevTxID) revert InvalidTxInHash(txInId, txInput.prevTxID);

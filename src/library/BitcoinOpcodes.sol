@@ -13,6 +13,7 @@ bytes1 constant LESS_THAN_OP_1 = 0x50;
 bytes1 constant OP_1 = 0x51;
 bytes1 constant OP_2 = 0x52;
 bytes1 constant OP_16 = 0x60;
+bytes1 constant OP_RETURN = 0x6a;
 bytes1 constant OP_DUB = 0x76;
 bytes1 constant OP_EQUAL = 0x87;
 bytes1 constant OP_EQUALVERIFY = 0x88;
