@@ -172,7 +172,7 @@ library BtcScript {
         if (addressType == AddressType.P2WPKH) {
             return scriptP2WPKH(bytes20(implementationHash));
         }
-        if (addressType == AddressType.P2SH) {
+        if (addressType == AddressType.P2WSH) {
             return scriptP2WSH(implementationHash);
         }
         if (addressType == AddressType.P2TR) {
