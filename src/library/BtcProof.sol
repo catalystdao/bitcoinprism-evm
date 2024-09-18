@@ -48,12 +48,13 @@ library BtcProof {
         bytes32 blockTxRoot = getBlockTxMerkleRoot(proofBlockHeader);
         if (blockTxRoot != txRoot) revert TxMerkleRootMismatch(blockTxRoot, txRoot);
 
+        bytes calldata rawTx = txProof.rawTx;
         // 2. Raw transaction to TxID
-        bytes32 rawTxId = getTxID(txProof.rawTx);
+        bytes32 rawTxId = getTxID(rawTx);
         if (rawTxId != txProof.txId) revert TxIDMismatch(rawTxId, txProof.txId);
 
         // Parse raw transaction for further validation.
-        return parsedTx = parseBitcoinTx(txProof.rawTx);
+        return parsedTx = parseBitcoinTx(rawTx);
     }
 
     /**
