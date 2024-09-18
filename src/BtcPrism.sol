@@ -115,7 +115,7 @@ contract BtcPrism is IBtcPrism {
         uint256 numHeaders = blockHeaders.length / 80;
         if (numHeaders * 80 != blockHeaders.length) revert WrongHeaderLength();
         if (numHeaders == 0) revert NoBlocksSubmitted();
-        require(blockHeight > latestBlockHeight - MAX_ALLOWED_REORG, "reorg");
+        if (blockHeight <= latestBlockHeight - MAX_ALLOWED_REORG) revert TooDeepReorg();
 
         // sanity check: the new chain must not end in a past difficulty period
         uint256 oldPeriod = latestBlockHeight / 2016;

@@ -11,6 +11,7 @@ error WrongDifficultyBits();
 error OldDifficultyPeriod();
 error InsufficientTotalDifficulty();
 error InsufficientChainLength();
+error TooDeepReorg();
 
 /** @notice Tracks Bitcoin. Provides block hashes. */
 interface IBtcPrism {
