@@ -122,7 +122,7 @@ library BtcScript {
             version = 0;
         } else if ((uint8(OP_1) <= uint8(versionBytes1) && uint8(versionBytes1) <= uint8(OP_16))) {
             unchecked {
-                version = int8(uint8(versionBytes1)) - int8(uint8(LESS_THAN_OP_1));
+                version = int8(uint8(versionBytes1)) - int8(uint8(OP_1_OFFSET));
             }
         } else {
             return (version = -1, witnessLength = 0, witPro = bytes32(script[0:0]));

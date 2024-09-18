@@ -35,7 +35,8 @@ library BtcProof {
     ) internal pure returns (BitcoinTx memory parsedTx) {
         // 5. Block header to block hash
         
-        bytes32 blockHeaderBlockHash = getBlockHash(txProof.blockHeader);
+        bytes calldata proofBlockHeader = txProof.blockHeader;
+        bytes32 blockHeaderBlockHash = getBlockHash(proofBlockHeader);
         if (blockHeaderBlockHash != blockHash) revert BlockHashMismatch(blockHeaderBlockHash, blockHash);
 
         // 4. and 3. Transaction ID included in block
@@ -44,15 +45,15 @@ library BtcProof {
             txProof.txIndex,
             txProof.txMerkleProof
         );
-        bytes32 blockTxRoot = getBlockTxMerkleRoot(txProof.blockHeader);
+        bytes32 blockTxRoot = getBlockTxMerkleRoot(proofBlockHeader);
         if (blockTxRoot != txRoot) revert TxMerkleRootMismatch(blockTxRoot, txRoot);
 
         // 2. Raw transaction to TxID
         bytes32 rawTxId = getTxID(txProof.rawTx);
         if (rawTxId != txProof.txId) revert TxIDMismatch(rawTxId, txProof.txId);
 
-        // 1. Finally, validate raw transaction and get relevant values.
-        parsedTx = parseBitcoinTx(txProof.rawTx);
+        // Parse raw transaction for further validation.
+        return parsedTx = parseBitcoinTx(txProof.rawTx);
     }
 
     /**

@@ -56,18 +56,6 @@ struct BitcoinTxIn {
     bytes script;
 }
 
-/**
- * @notice A Parsed Script address
- */
-struct BitcoinAddress {
-    /** @dev P2PKH, address hash or P2SH, script hash. Is empty if segwit transaction */
-    bytes20 legacyAddress;
-    /** @dev Witness version */
-    uint8 witnessVersion;
-    /** @dev Witness Program */
-    bytes witnessProgram;
-}
-
 struct BitcoinTxOut {
     /** @dev TXO value, in satoshis */
     uint64 valueSats;

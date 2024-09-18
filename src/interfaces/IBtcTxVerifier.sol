@@ -11,8 +11,8 @@ error InvalidProof();
 /** @notice Verifies Bitcoin transaction proofs. */
 interface IBtcTxVerifier {
     /**
-     * @notice Verifies that the a transaction cleared, paying a given amount to
-     *         a given address. Specifically, verifies a proof that the tx was
+     * @notice Verifies that the a transaction cleared, and returns the paid amount
+     *         to outputScript. Specifically, verifies a proof that the tx was
      *         in block N, and that block N has at least M confirmations.
      */
     function verifyPayment(

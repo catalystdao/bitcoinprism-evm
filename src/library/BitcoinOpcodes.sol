@@ -9,7 +9,12 @@ bytes1 constant PUSH_75 = 0x4b;
 bytes1 constant OP_PUSHDATA1 = 0x4c;
 bytes1 constant OP_PUSHDATA2 = 0x4d;
 bytes1 constant OP_PUSHDATA4 = 0x4e;
-bytes1 constant LESS_THAN_OP_1 = 0x50;
+/**
+ * @dev
+ * If you want OP_X and have X (X <= 16) then X + OP_1_OFFSET = OP_X. 
+ * If you want X and have OP_X (OP_0 < OP_X <= OP_16) then OP_X - OP_1_OFFSET = X
+ */
+bytes1 constant OP_1_OFFSET = 0x50;
 bytes1 constant OP_1 = 0x51;
 bytes1 constant OP_2 = 0x52;
 bytes1 constant OP_16 = 0x60;
