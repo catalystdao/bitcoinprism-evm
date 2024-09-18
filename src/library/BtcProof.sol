@@ -99,6 +99,7 @@ library BtcProof {
         sats = txo.valueSats;
         unchecked {
             // Load the return script from the next output of the transaction.
+            // If there is no next output, this will fail.
             returnScript = parsedTx.outputs[txOutIx + 1].script;
         }
     }
@@ -212,11 +213,11 @@ library BtcProof {
                     uint256(bytes32(siblings[i * 32:(i + 1) * 32]))  // i is small.
                 )
             );
-            if (txIndex & 1 == 0) {
-                ret = doubleSha(abi.encodePacked(ret, s));
-            } else {
-                ret = doubleSha(abi.encodePacked(s, ret));
-            }
+            ret = doubleSha(
+                txIndex & 1 == 0
+                    ? abi.encodePacked(ret, s)
+                    : abi.encodePacked(s, ret)
+                );
             txIndex = txIndex >> 1;
         }
         return ret;
