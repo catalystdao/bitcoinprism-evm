@@ -39,12 +39,12 @@ library BtcProof {
         if (blockHeaderBlockHash != blockHash) revert BlockHashMismatch(blockHeaderBlockHash, blockHash);
 
         // 4. and 3. Transaction ID included in block
-        bytes32 blockTxRoot = getBlockTxMerkleRoot(txProof.blockHeader);
         bytes32 txRoot = getTxMerkleRoot(
             txProof.txId,
             txProof.txIndex,
             txProof.txMerkleProof
         );
+        bytes32 blockTxRoot = getBlockTxMerkleRoot(txProof.blockHeader);
         if (blockTxRoot != txRoot) revert TxMerkleRootMismatch(blockTxRoot, txRoot);
 
         // 2. Raw transaction to TxID
