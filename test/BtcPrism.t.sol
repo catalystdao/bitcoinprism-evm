@@ -57,37 +57,37 @@ contract BtcPrismTest is DSTest {
         bytes.concat(bVer, bParent, bTxRoot, bTime, bBits, hex"41b360c0");
 
     function testGetTarget() public {
-        BtcPrism mirror = createBtcPrism();
+        BtcPrism prism = createBtcPrism();
         uint256 expectedTarget;
         expectedTarget = 0x0000000000000000000B8C8B0000000000000000000000000000000000000000;
-        assertEq(mirror.getTarget(hex"8b8c0b17"), expectedTarget);
+        assertEq(prism.getTarget(hex"8b8c0b17"), expectedTarget);
         expectedTarget = 0x00000000000404CB000000000000000000000000000000000000000000000000;
-        assertEq(mirror.getTarget(hex"cb04041b"), expectedTarget);
+        assertEq(prism.getTarget(hex"cb04041b"), expectedTarget);
         expectedTarget = 0x000000000000000000096A200000000000000000000000000000000000000000;
-        assertEq(mirror.getTarget(hex"206a0917"), expectedTarget);
+        assertEq(prism.getTarget(hex"206a0917"), expectedTarget);
     }
 
     function testSubmitError() public {
-        BtcPrism mirror = createBtcPrism();
-        assertEq(mirror.getLatestBlockHeight(), 717694);
+        BtcPrism prism = createBtcPrism();
+        assertEq(prism.getLatestBlockHeight(), 717694);
         vm.expectRevert(abi.encodeWithSelector(BadParent.selector));
-        mirror.submit(717695, headerWrongParentHash);
+        prism.submit(717695, headerWrongParentHash);
         vm.expectRevert(abi.encodeWithSelector(WrongHeaderLength.selector));
-        mirror.submit(717695, headerWrongLength);
+        prism.submit(717695, headerWrongLength);
         vm.expectRevert(abi.encodeWithSelector(HashAboveTarget.selector));
-        mirror.submit(717695, headerHashTooEasy);
+        prism.submit(717695, headerHashTooEasy);
     }
 
     // function testSubmitErrorFuzz1(bytes calldata x) public {
     //     vm.expectRevert("");
-    //     mirror.submit(718115, x);
-    //     assert(mirror.getLatestBlockHeight() == 718115);
+    //     prism.submit(718115, x);
+    //     assert(prism.getLatestBlockHeight() == 718115);
     // }
 
     // function testSubmitErrorFuzz2(uint256 height, bytes calldata x) public {
     //     vm.expectRevert("");
-    //     mirror.submit(height, x);
-    //     assert(mirror.getLatestBlockHeight() == 718115);
+    //     prism.submit(height, x);
+    //     assert(prism.getLatestBlockHeight() == 718115);
     // }
 
     event NewTip(uint256 blockHeight, uint256 blockTime, bytes32 blockHash);
@@ -97,8 +97,8 @@ contract BtcPrismTest is DSTest {
         uint32 newDifficultyBits
     );
 
-    function createBtcPrism() internal returns (BtcPrism mirror) {
-        mirror = new BtcPrism(
+    function createBtcPrism() internal returns (BtcPrism prism) {
+        prism = new BtcPrism(
             717694, // start at block #717694, two  blocks before retarget
             0x0000000000000000000b3dd6d6062aa8b7eb99d033fe29e507e0a0d81b5eaeed,
             1641627092,
@@ -108,36 +108,36 @@ contract BtcPrismTest is DSTest {
     }
 
     function testSubmit() public {
-        BtcPrism mirror = createBtcPrism();
-        assertEq(mirror.getLatestBlockHeight(), 717694);
+        BtcPrism prism = createBtcPrism();
+        assertEq(prism.getLatestBlockHeight(), 717694);
         vm.expectEmit(true, true, true, true);
         emit NewTip(
             717695,
             1641627659,
             0x00000000000000000000135a8473d7d3a3b091c928246c65ce2a396dd2a5ca9a
         );
-        mirror.submit(717695, headerGood);
-        assertEq(mirror.getLatestBlockHeight(), 717695);
-        assertEq(mirror.getLatestBlockTime(), 1641627659);
+        prism.submit(717695, headerGood);
+        assertEq(prism.getLatestBlockHeight(), 717695);
+        assertEq(prism.getLatestBlockTime(), 1641627659);
         assertEq(
-            mirror.getBlockHash(717695),
+            prism.getBlockHash(717695),
             0x00000000000000000000135a8473d7d3a3b091c928246c65ce2a396dd2a5ca9a
         );
     }
 
     function testSubmitError2() public {
-        BtcPrism mirror = createBtcPrism();
-        mirror.submit(717695, headerGood);
-        assertEq(mirror.getLatestBlockHeight(), 717695);
+        BtcPrism prism = createBtcPrism();
+        prism.submit(717695, headerGood);
+        assertEq(prism.getLatestBlockHeight(), 717695);
         vm.expectRevert(abi.encodeWithSelector(NoBlocksSubmitted.selector));
-        mirror.submit(717696, hex"");
-        assertEq(mirror.getLatestBlockHeight(), 717695);
+        prism.submit(717696, hex"");
+        assertEq(prism.getLatestBlockHeight(), 717695);
     }
 
     function testRetarget() public {
-        BtcPrism mirror = createBtcPrism();
-        mirror.submit(717695, headerGood);
-        assertEq(mirror.getLatestBlockHeight(), 717695);
+        BtcPrism prism = createBtcPrism();
+        prism.submit(717695, headerGood);
+        assertEq(prism.getLatestBlockHeight(), 717695);
 
         vm.expectEmit(true, true, true, true);
         emit NewTotalDifficultySinceRetarget(
@@ -151,19 +151,19 @@ contract BtcPrismTest is DSTest {
             1641627937,
             0x0000000000000000000335dd327bde445d83f1ce40af2736a7c279045b9a55bf
         );
-        mirror.submit(717696, b717696);
-        assertEq(mirror.getLatestBlockHeight(), 717696);
-        assertEq(mirror.getLatestBlockTime(), 1641627937);
+        prism.submit(717696, b717696);
+        assertEq(prism.getLatestBlockHeight(), 717696);
+        assertEq(prism.getLatestBlockTime(), 1641627937);
         assertEq(
-            mirror.getBlockHash(717696),
+            prism.getBlockHash(717696),
             0x0000000000000000000335dd327bde445d83f1ce40af2736a7c279045b9a55bf
         );
     }
 
     function testRetargetLonger() public {
-        BtcPrism mirror = createBtcPrism();
-        mirror.submit(717695, headerGood);
-        assertEq(mirror.getLatestBlockHeight(), 717695);
+        BtcPrism prism = createBtcPrism();
+        prism.submit(717695, headerGood);
+        assertEq(prism.getLatestBlockHeight(), 717695);
 
         vm.expectEmit(true, true, true, true);
         emit NewTotalDifficultySinceRetarget(
@@ -178,8 +178,8 @@ contract BtcPrismTest is DSTest {
             0x00000000000000000000794d6f4f6ee1c09e69a81469d7456e67be3d724223fb
         );
         vm.recordLogs();
-        mirror.submit(717695, bytes.concat(headerGood, b717696, b717697));
-        assertEq(mirror.getLatestBlockHeight(), 717697);
+        prism.submit(717695, bytes.concat(headerGood, b717696, b717697));
+        assertEq(prism.getLatestBlockHeight(), 717697);
         assertEq(vm.getRecordedLogs().length, 2);
     }
 }

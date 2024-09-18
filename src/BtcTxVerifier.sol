@@ -10,10 +10,10 @@ import { NoBlock, TooFewConfirmations, InvalidProof } from "./interfaces/IBtcTxV
 // uses BtcPrism as a source of truth for which Bitcoin block hashes are in the
 // canonical chain.
 contract BtcTxVerifier is IBtcTxVerifier {
-    IBtcPrism public immutable mirror;
+    IBtcPrism public immutable prism;
 
-    constructor(IBtcPrism _mirror) {
-        mirror = _mirror;
+    constructor(IBtcPrism _prism) {
+        prism = _prism;
     }
 
     function _verifyPayment(
@@ -24,7 +24,7 @@ contract BtcTxVerifier is IBtcTxVerifier {
         bytes calldata outputScript
     ) internal view returns (uint256 sats) {
         {
-            uint256 currentHeight = mirror.getLatestBlockHeight();
+            uint256 currentHeight = prism.getLatestBlockHeight();
 
             if (currentHeight < blockNum) revert NoBlock(currentHeight, blockNum);
 
@@ -33,7 +33,7 @@ contract BtcTxVerifier is IBtcTxVerifier {
             }
         }
 
-        bytes32 blockHash = mirror.getBlockHash(blockNum);
+        bytes32 blockHash = prism.getBlockHash(blockNum);
 
         bytes memory txOutScript;
         (sats, txOutScript) = BtcProof.validateTx(
@@ -65,7 +65,7 @@ contract BtcTxVerifier is IBtcTxVerifier {
         uint256 amountSats
     ) internal view returns (bool) {
         {
-            uint256 currentHeight = mirror.getLatestBlockHeight();
+            uint256 currentHeight = prism.getLatestBlockHeight();
 
             if (currentHeight < blockNum) revert NoBlock(currentHeight, blockNum);
 
@@ -74,7 +74,7 @@ contract BtcTxVerifier is IBtcTxVerifier {
             }
         }
 
-        bytes32 blockHash = mirror.getBlockHash(blockNum);
+        bytes32 blockHash = prism.getBlockHash(blockNum);
 
         if(
             !BtcProof.validateOrdinalTransfer(

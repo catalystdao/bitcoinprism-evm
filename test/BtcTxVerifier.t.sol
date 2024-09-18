@@ -24,16 +24,16 @@ contract BtcTxVerifierTest is DSTest {
     );
 
     function testVerifyTx() public {
-        BtcPrism mirror = new BtcPrism(
+        BtcPrism prism = new BtcPrism(
             736000, // start at block #736000
             0x00000000000000000002d52d9816a419b45f1f0efe9a9df4f7b64161e508323d,
             0,
             0x0,
             false
         );
-        assertEq(mirror.getLatestBlockHeight(), 736000);
+        assertEq(prism.getLatestBlockHeight(), 736000);
 
-        BtcTxVerifier verif = new BtcTxVerifier(mirror);
+        BtcTxVerifier verif = new BtcTxVerifier(prism);
 
         // validate payment 736000 #1
         bytes memory header736000 = (
@@ -99,16 +99,16 @@ contract BtcTxVerifierTest is DSTest {
     }
 
     function testVerifySegwitTx() public {
-        BtcPrism mirror = new BtcPrism(
+        BtcPrism prism = new BtcPrism(
             831400, // start at block #736000
             0x00000000000000000002f2b8b266d44886b53142a93464b7042ca8b014d1fcfc,
             0,
             0x0,
             false
         );
-        assertEq(mirror.getLatestBlockHeight(), 831400);
+        assertEq(prism.getLatestBlockHeight(), 831400);
 
-        BtcTxVerifier verif = new BtcTxVerifier(mirror);
+        BtcTxVerifier verif = new BtcTxVerifier(prism);
 
         // validate payment 736000 #1
         bytes memory header831400 = (

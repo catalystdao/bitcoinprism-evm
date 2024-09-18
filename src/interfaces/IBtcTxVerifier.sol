@@ -23,8 +23,8 @@ interface IBtcTxVerifier {
         bytes calldata outputScript
     ) external view returns (uint256 amountSats);
 
-    /** @notice Returns the underlying mirror associated with this verifier. */
-    function mirror() external view returns (IBtcPrism);
+    /** @notice Returns the underlying prism associated with this verifier. */
+    function prism() external view returns (IBtcPrism);
 
     /**
      * @notice Verifies that the a transaction cleared, sending a specific ordinal to
