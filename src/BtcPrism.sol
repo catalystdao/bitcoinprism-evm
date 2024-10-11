@@ -164,7 +164,7 @@ contract BtcPrism is IBtcPrism {
             // erase any block hashes above newHeight, now invalidated.
             // (in case we just accepted a shorter, heavier chain.)
             for (uint256 i = newHeight + 1; i <= latestBlockHeight; ++i) {
-                blockHashes[i % MAX_ALLOWED_REORG] = 0;
+                blockHashes[i % NUM_BLOCKS] = 0;
             }
 
             emit NewTotalDifficultySinceRetarget(
