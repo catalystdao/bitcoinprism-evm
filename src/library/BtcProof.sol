@@ -13,6 +13,8 @@ error BlockHashMismatch(bytes32 blockHeader, bytes32 givenBlockHash);
 error InvalidTxInHash(uint256 expected, uint256 actual);
 error InvalidTxInIndex(uint32 expected, uint32 actual);
 
+error InvalidFormat();
+
 // BtcProof provides functions to prove things about Bitcoin transactions.
 // Verifies merkle inclusion proofs, transaction IDs, and payment details.
 library BtcProof {
@@ -54,7 +56,11 @@ library BtcProof {
         if (rawTxId != txProof.txId) revert TxIDMismatch(rawTxId, txProof.txId);
 
         // Parse raw transaction for further validation.
-        return parsedTx = parseBitcoinTx(rawTx);
+        parsedTx = parseBitcoinTx(rawTx);
+
+        // Check if format is valid
+        if (!parsedTx.validFormat) revert InvalidFormat();
+        return parsedTx;
     }
 
     /**
