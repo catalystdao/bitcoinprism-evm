@@ -141,12 +141,12 @@ contract BtcPrism is IBtcPrism {
 
         // verify and store each block
         bytes32 oldTip = getBlockHash(latestBlockHeight);
-        uint256 nReorg = 0;
+        uint256 nReorg = latestBlockHeight - blockHeight;
         for (uint256 i = 0; i < numHeaders; ++i) {
             // unchecked: This might overflow if numheaders = type(uint256).max - type(uint256).max/2016. But that is such a massive number
             // that it is not going to overflow.
             uint256 blockNum = blockHeight + i;  
-            nReorg += submitBlock(blockNum, blockHeaders[80 * i:80 * (i + 1)]); // unchecked: Overflows if blockHeaders.length == type(uint256).max.
+            submitBlock(blockNum, blockHeaders[80 * i:80 * (i + 1)]); // unchecked: Overflows if blockHeaders.length == type(uint256).max.
         }
 
         // check that we have a new heaviest chain
@@ -223,7 +223,6 @@ contract BtcPrism is IBtcPrism {
 
     function submitBlock(uint256 blockHeight, bytes calldata blockHeader)
         private
-        returns (uint256 numReorged)
     {
         unchecked {
 
@@ -236,11 +235,7 @@ contract BtcPrism is IBtcPrism {
         );
 
         // optimistically save the block hash
-        // we'll revert if the header turns out to be invalid
-        if (blockHeight <= latestBlockHeight) {
-            // if we're overwriting a non-zero block hash, that block is reorged
-            numReorged = latestBlockHeight - blockHeight;
-        }
+        // we'll revert if the header turns out to be invalid.
         // this is the most expensive line. 20,000 gas to use a new storage slot
         blockHashes[blockHeight % NUM_BLOCKS] = bytes32(blockHashNum);
 
