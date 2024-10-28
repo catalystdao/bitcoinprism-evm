@@ -264,6 +264,7 @@ contract BtcPrism is IBtcPrism {
             // https://blog.lopp.net/the-block-storms-of-bitcoins-testnet/
             if (!isTestnet) {
                 if (target >> 2 >= lastTarget) revert DifficultyRetargetLT25();
+                if (target << 2 <= lastTarget) revert DifficultyRetargetLT25();
             }
             periodToTarget[period] = target;
         } else if (!isTestnet) {
