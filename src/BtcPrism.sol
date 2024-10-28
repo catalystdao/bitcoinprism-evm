@@ -204,7 +204,12 @@ contract BtcPrism is IBtcPrism {
         unchecked {
 
         uint256 target = periodToTarget[period];
-        uint256 workPerBlock = (2**256 - 1) / target;
+        // unchecked: The maximum target is around 2^224 < 2**256
+        // ~target / (target + 1) is type(uint256).max if target == 0
+        // but target > 1 => ~target / (target + 1) < type(uint256).max
+        // => ~target / (target + 1) + 1 <= type(uint256).max
+        // Target >= 1 is checked on the bitcoin level.
+        uint256 workPerBlock = ~target / (target + 1) + 1;
 
         // unchecked: period is not raw from input but parsed as newHeight/2016.
         // as such, we can multiply it by 2016.
