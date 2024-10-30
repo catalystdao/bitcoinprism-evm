@@ -13,6 +13,8 @@ error BlockHashMismatch(bytes32 blockHeader, bytes32 givenBlockHash);
 error InvalidTxInHash(uint256 expected, uint256 actual);
 error InvalidTxInIndex(uint32 expected, uint32 actual);
 
+error TxIndexNot0(uint256 index);
+
 // BtcProof provides functions to prove things about Bitcoin transactions.
 // Verifies merkle inclusion proofs, transaction IDs, and payment details.
 library BtcProof {
@@ -220,6 +222,7 @@ library BtcProof {
                 );
             txIndex = txIndex >> 1;
         }
+        if (txIndex != 0) revert TxIndexNot0(txIndex);
         return ret;
 
         }
