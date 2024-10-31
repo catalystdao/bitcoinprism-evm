@@ -28,6 +28,7 @@ struct BitcoinAddress {
  */
 library BtcScript {
     error ScriptTooLong(uint256 length);
+    error NotImplemented();
 
     //--- Bitcoin Script Decode Helpers ---//
 
@@ -146,18 +147,7 @@ library BtcScript {
      * @notice Global helper for encoding Bitcoin scripts
      */
     function getBitcoinScript(BitcoinAddress calldata btcAddress) internal pure returns(bytes memory script) {
-        // Check if segwit
-        if (btcAddress.addressType == AddressType.P2PKH) return scriptP2PKH(bytes20(btcAddress.implementationHash));
-        if (btcAddress.addressType == AddressType.P2SH) return scriptP2SH(bytes20(btcAddress.implementationHash));
-        if (btcAddress.addressType == AddressType.P2WPKH) {
-            return scriptP2WPKH(bytes20(btcAddress.implementationHash));
-        }
-        if (btcAddress.addressType == AddressType.P2WSH) {
-            return scriptP2WSH(btcAddress.implementationHash);
-        }
-        if (btcAddress.addressType == AddressType.P2TR) {
-            return scriptP2TR(btcAddress.implementationHash);
-        }
+        return getBitcoinScript(btcAddress.addressType, btcAddress.implementationHash);
     }
 
     /**
@@ -178,6 +168,7 @@ library BtcScript {
         if (addressType == AddressType.P2TR) {
             return scriptP2TR(implementationHash);
         }
+        revert NotImplemented();
     }
 
     /// @notice Get the associated script out for a P2PKH address
