@@ -40,14 +40,14 @@ library BtcScript {
         bytes1 firstByte = script[0];
         if (firstByte == OP_DUB) {
             if (script.length == P2PKH_SCRIPT_LENGTH) {
-                btcAddress.addressType = AddressType.P2PKH;
                 btcAddress.implementationHash = decodeP2PKH(script);
+                btcAddress.addressType = btcAddress.implementationHash == 0 ? AddressType.UNKNOWN : AddressType.P2PKH;
                 return btcAddress;
             }
         } else if (firstByte == OP_HASH160) {
             if (script.length == P2SH_SCRIPT_LENGTH) {
-                btcAddress.addressType = AddressType.P2SH;
                 btcAddress.implementationHash = decodeP2SH(script);
+                btcAddress.addressType = btcAddress.implementationHash == 0 ? AddressType.UNKNOWN : AddressType.P2SH;
                 return btcAddress;
             }
         } else {
@@ -55,13 +55,9 @@ library BtcScript {
             (int8 version, uint8 witnessLength, bytes32 witPro) = decodeWitnessProgram(script);
             if (version != -1) {
                 if (version == 0) {
-                    if (witnessLength == 20) {
-                        btcAddress.addressType = AddressType.P2WPKH;
-                    } else if (witnessLength == 32) {
-                        btcAddress.addressType = AddressType.P2WSH;
-                    }
+                    btcAddress.addressType = witnessLength == 20 ? AddressType.P2WPKH : witnessLength == 32 ? AddressType.P2WSH : AddressType.UNKNOWN;
                 } else if (version == 1) {
-                    btcAddress.addressType = AddressType.P2TR;
+                    btcAddress.addressType = witnessLength == 32 ? AddressType.P2TR : AddressType.UNKNOWN;
                 }
                 btcAddress.implementationHash = witPro;
                 return btcAddress;
