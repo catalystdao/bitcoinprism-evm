@@ -141,12 +141,12 @@ contract BtcPrism is IBtcPrism {
 
         // verify and store each block
         bytes32 oldTip = getBlockHash(latestBlockHeight);
-        uint256 nReorg = 0;
+        uint256 nReorg = latestBlockHeight - blockHeight;
         for (uint256 i = 0; i < numHeaders; ++i) {
             // unchecked: This might overflow if numheaders = type(uint256).max - type(uint256).max/2016. But that is such a massive number
             // that it is not going to overflow.
             uint256 blockNum = blockHeight + i;  
-            nReorg += submitBlock(blockNum, blockHeaders[80 * i:80 * (i + 1)]); // unchecked: Overflows if blockHeaders.length == type(uint256).max.
+            submitBlock(blockNum, blockHeaders[80 * i:80 * (i + 1)]); // unchecked: Overflows if blockHeaders.length == type(uint256).max.
         }
 
         // check that we have a new heaviest chain
@@ -204,7 +204,12 @@ contract BtcPrism is IBtcPrism {
         unchecked {
 
         uint256 target = periodToTarget[period];
-        uint256 workPerBlock = (2**256 - 1) / target;
+        // unchecked: The maximum target is around 2^224 < 2**256
+        // ~target / (target + 1) is type(uint256).max if target == 0
+        // but target > 1 => ~target / (target + 1) < type(uint256).max
+        // => ~target / (target + 1) + 1 <= type(uint256).max
+        // Target >= 1 is checked on the bitcoin level.
+        uint256 workPerBlock = ~target / (target + 1) + 1;
 
         // unchecked: period is not raw from input but parsed as newHeight/2016.
         // as such, we can multiply it by 2016.
@@ -218,7 +223,6 @@ contract BtcPrism is IBtcPrism {
 
     function submitBlock(uint256 blockHeight, bytes calldata blockHeader)
         private
-        returns (uint256 numReorged)
     {
         unchecked {
 
@@ -231,11 +235,7 @@ contract BtcPrism is IBtcPrism {
         );
 
         // optimistically save the block hash
-        // we'll revert if the header turns out to be invalid
-        if (blockHeight <= latestBlockHeight) {
-            // if we're overwriting a non-zero block hash, that block is reorged
-            numReorged = latestBlockHeight - blockHeight;
-        }
+        // we'll revert if the header turns out to be invalid.
         // this is the most expensive line. 20,000 gas to use a new storage slot
         blockHashes[blockHeight % NUM_BLOCKS] = bytes32(blockHashNum);
 
@@ -264,6 +264,7 @@ contract BtcPrism is IBtcPrism {
             // https://blog.lopp.net/the-block-storms-of-bitcoins-testnet/
             if (!isTestnet) {
                 if (target >> 2 >= lastTarget) revert DifficultyRetargetLT25();
+                if (target << 2 <= lastTarget) revert DifficultyRetargetLT25();
             }
             periodToTarget[period] = target;
         } else if (!isTestnet) {
