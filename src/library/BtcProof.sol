@@ -16,6 +16,8 @@ error InvalidTxInIndex(uint32 expected, uint32 actual);
 error TxIndexNot0(uint256 index);
 error InvalidFormat();
 
+error InvalidMerkleNodePair(uint256, bytes32, bytes32);
+
 // BtcProof provides functions to prove things about Bitcoin transactions.
 // Verifies merkle inclusion proofs, transaction IDs, and payment details.
 library BtcProof {
@@ -204,6 +206,15 @@ library BtcProof {
 
     /**
      * @dev Recomputes the transactions root given a merkle proof.
+     * If 2 nodes together (64 bytes) makes a validly formatted transaction, then the merkle proof
+     * cannot be verified. If these nodes are at the top of the tree, the merkle tree is entirely invalid.
+     * However, this is not an issue since in just the first 5 bytes, only 1-3 valid combinations exists (0x0100000001-0x0300000001)
+     * That means that only 3 in 1099511627775 nodes will be able to continue beyond the first check.
+     * Every block contains less than 5000 transactions, 5000*6*24*365*3/1099511627775 = 0.07%.
+     * So each year there is 0.07% chance that a single node may accidently be invalided by just a single check of the
+     * first 5 bytes. There are even further restrictions so the chance that 2 random nodes combine to from to make a
+     * valid transaction is not important. (for example, 1 more varInt needs to be 01 or 00, and 2 varints needs to sum to less than 8)
+     * These 2 contains adds 127755 invalid options so the total is 3/140468108006395125 => ≈0% chance
      */
     function getTxMerkleRoot(
         bytes32 txId,
@@ -214,17 +225,23 @@ library BtcProof {
 
         bytes32 ret = bytes32(Endian.reverse256(uint256(txId)));
         uint256 len = siblings.length / 32;
+
+        // This merkle calculation is vulnerable to an attack where a transaction is converted into a leaf.
+        // this is possible because it is possible to create a valid 64 bytes (2*32 bytes) transaction and
+        // leafs are hashes with the same algorithm as nodes.
+        // 
         for (uint256 i = 0; i < len; ++i) {
             bytes32 s = bytes32(
                 Endian.reverse256(
                     uint256(bytes32(siblings[i * 32:(i + 1) * 32]))  // i is small.
                 )
             );
-            ret = doubleSha(
-                txIndex & 1 == 0
+            bytes memory pair = txIndex & 1 == 0
                     ? abi.encodePacked(ret, s)
-                    : abi.encodePacked(s, ret)
-                );
+                    : abi.encodePacked(s, ret);
+            // Check if the pair is a valid transaction:
+            if (checkIfBitcoinTransaction(pair)) revert InvalidMerkleNodePair(txIndex, ret, s);
+            ret = doubleSha(pair);
             txIndex = txIndex >> 1;
         }
         if (txIndex != 0) revert TxIndexNot0(txIndex);
@@ -326,6 +343,70 @@ library BtcProof {
         return ret;
 
         }
+    }
+
+    /**
+     * @notice Checks if bytes may be a Bitcoin transaction.
+     * If at any point 
+     * @dev Returns false if rawTx is less than 56.
+     * If this needs to be used to verify transaction larger than 64 bytes, please recheck every single line.
+     * For example, it is assumed that varints can't be larger than 0xfe == 256.
+     */
+    function checkIfBitcoinTransaction(bytes memory rawTx)
+        internal
+        pure
+        returns(bool)
+    { 
+        uint256 size = rawTx.length;
+        if (size < 56) return false;
+        
+        uint256 version = uint8(bytes1(rawTx[0]));
+        if (version < 1 || version > 2) {
+            return false; // invalid version
+        }
+        // Then check that the next 3 bytes are 0.
+        if (bytes1(rawTx[1]) != bytes1(0)) return false;
+        if (bytes1(rawTx[2]) != bytes1(0)) return false;
+        if (bytes1(rawTx[3]) != bytes1(0)) return false;
+        // We need to read the next varint. Importantly,
+        // if the varint is larger than 1 byte (>= 0xfd) then we can instant disqualify it.
+        uint256 nInputs = uint8(bytes1(rawTx[4]));
+        uint256 offset = 5;
+        // Each transaction adds at least 41 bytes. Let check if there is space.
+        if (nInputs * (32 + 4 + 4 + 1) + offset > size) return false;
+
+        // We need to check if the input(s) is valid. Sadly, a lot of these bytes
+        // can be pretty much anything.
+        for (uint256 i = 0; i < nInputs; ++i) {
+            // prevTxID doesn't matter.
+            offset += 32;
+            // prevTxIndex doesn't matter.
+            offset += 4;
+            // Like previously, if the varint is larger than 1 byte (>= 0xfd) we can instantly disqualify it.
+            uint256 nInScriptBytes = uint8(bytes1(rawTx[offset]));
+            if (nInScriptBytes + offset > size) return false;
+            offset += nInScriptBytes + 1; // (+1 from varInt)
+            // seqNo doesn't matter
+            offset += 4;
+        }
+
+        // varInt again.
+        uint256 nOutputs = uint8(bytes1(rawTx[offset]));
+        if (nOutputs * (8 + 1) + offset > size) return false;
+        offset += 1;
+        for (uint256 i = 0; i < nOutputs; ++i) {
+            // valueSats doesn't matter
+            offset += 8;
+            // varInt again.
+            uint256 nOutScriptBytes = uint8(bytes1(rawTx[offset]));
+            if (nOutScriptBytes + offset > size) return false;
+            offset += nOutScriptBytes + 1; // (+1 from varInt)
+        }
+
+        // Finally, read locktime, the last four bytes in the tx.
+        offset += 4;
+        if (offset != size) return false;
+        return true;
     }
 
     /** Reads a Bitcoin-serialized varint = a u256 serialized in 1-9 bytes. */
