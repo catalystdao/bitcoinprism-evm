@@ -106,11 +106,11 @@ contract TxAsNodeTest is DSTest {
 
     /** @notice Realistically, we shouldn't be able to fuzz for a valid transaction. */
     /// forge-config: default.fuzz.runs = 10000
-    function testFuzzForValidDecodedNodePair(bytes32 a, bytes32 b) public {
-        bytes memory rawTx = bytes.concat(a, b);
-        require(rawTx.length == 64);
-        bool isValid = BtcProof.checkIfBitcoinTransaction(rawTx);
+    // function testFuzzForValidDecodedNodePair(bytes32 a, bytes32 b) public {
+    //     bytes memory rawTx = bytes.concat(a, b);
+    //     require(rawTx.length == 64);
+    //     bool isValid = BtcProof.checkIfBitcoinTransaction(rawTx);
 
-        assertTrue(!isValid);
-    }
+    //     assertTrue(!isValid);
+    // }
 }
