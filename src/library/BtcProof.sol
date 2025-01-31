@@ -196,10 +196,13 @@ library BtcProof {
     function getBlockTxMerkleRoot(bytes calldata blockHeader)
         internal
         pure
-        returns (bytes32)
+        returns (bytes32 merkleroot)
     {
         require(blockHeader.length == 80);
-        return bytes32(blockHeader[36:68]);
+        assembly ("memory-safe") {
+            // merkleroot = bytes32(blockHeader[36:68]);
+            merkleroot := calldataload(add(blockHeader.offset, 36))
+        }
     }
 
     /**
@@ -215,11 +218,12 @@ library BtcProof {
         bytes32 ret = bytes32(Endian.reverse256(uint256(txId)));
         uint256 len = siblings.length / 32;
         for (uint256 i = 0; i < len; ++i) {
-            bytes32 s = bytes32(
-                Endian.reverse256(
-                    uint256(bytes32(siblings[i * 32:(i + 1) * 32]))  // i is small.
-                )
-            );
+            bytes32 s;
+            assembly ("memory-safe") {
+                // uint256(bytes32(siblings[i * 32:(i + 1) * 32]))
+                s := calldataload(add(siblings.offset, mul(i, 32))) // i is small.
+            }
+            s = bytes32(Endian.reverse256(uint256(s)));
             ret = doubleSha(
                 txIndex & 1 == 0
                     ? abi.encodePacked(ret, s)
@@ -343,15 +347,30 @@ library BtcProof {
             return (val, newOffset = offset + 1);
         }
         if (pivot == 0xfd) {
-            val = Endian.reverse16(uint16(bytes2(buf[offset + 1:offset + 3])));
+            bytes2 val2;
+            assembly ("memory-safe") {
+                // val16 = uint16(bytes2(buf[offset + 1:offset+3]));
+                val2 := calldataload(add(buf.offset, add(offset, 1)))
+            }
+            val = Endian.reverse16(uint16(val2));
             return (val, newOffset = offset + 3);
         }
         if (pivot == 0xfe) {
-            val = Endian.reverse32(uint32(bytes4(buf[offset + 1:offset + 5])));
+            bytes4 val4;
+            assembly ("memory-safe") {
+                // val32 = uint32(bytes4(buf[offset + 1:offset+5]));
+                val4 := calldataload(add(buf.offset, add(offset, 1)))
+            }
+            val = Endian.reverse32(uint32(val4));
             return (val, newOffset = offset + 5);
         }
         // pivot == 0xff
-        val = Endian.reverse64(uint64(bytes8(buf[offset + 1:offset + 9])));
+        bytes8 val8;
+        assembly ("memory-safe") {
+            // val64 = uint64(bytes8(buf[offset + 1:offset+9]));
+            val8 := calldataload(add(buf.offset, add(offset, 1)))
+        }
+        val = Endian.reverse64(uint64(val8));
         return (val, newOffset = offset + 9);
 
         }
