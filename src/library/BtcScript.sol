@@ -206,11 +206,11 @@ library BtcScript {
         if (scriptLength <= 75) return bytes.concat(OP_RETURN, bytes1(uint8(scriptLength)), returnScript);
         // If script length is more than than 75, we need to use the longer push codes.
         // The first one 0x4c allows us to specify with 1 byte how many bytes to push:
-        if (scriptLength <= type(uint8).max) bytes.concat(OP_RETURN, OP_PUSHDATA1, bytes1(uint8(scriptLength)), returnScript);
+        if (scriptLength <= type(uint8).max) return bytes.concat(OP_RETURN, OP_PUSHDATA1, bytes1(uint8(scriptLength)), returnScript);
         // The next 0x4d allows us to specify with 2 bytes
-        if (scriptLength <= type(uint16).max) bytes.concat(OP_RETURN, OP_PUSHDATA2, bytes2(uint16(scriptLength)), returnScript);
+        if (scriptLength <= type(uint16).max) return bytes.concat(OP_RETURN, OP_PUSHDATA2, bytes2(uint16(scriptLength)), returnScript);
         // The next 0x4e allows us to specify with 4 bytes
-        if (scriptLength <= type(uint32).max) bytes.concat(OP_RETURN, OP_PUSHDATA4, bytes4(uint32(scriptLength)), returnScript);
+        if (scriptLength <= type(uint32).max) return bytes.concat(OP_RETURN, OP_PUSHDATA4, bytes4(uint32(scriptLength)), returnScript);
 
         // We can't add all script data.
         revert ScriptTooLong(scriptLength);
